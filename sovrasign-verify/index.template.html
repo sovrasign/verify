@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- Template: web/app/build.mjs writes index.html from it with the engine's scripts/sri.mjs, which
+     adds the Subresource Integrity hashes of the scripts, the stylesheet and the WebAssembly
+     module (an inline import map, admitted by the CSP below and the API's by its hash). Every
+     reference is relative: the folder is served as is, from the API or from a static origin. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <!-- The trust list the page starts with: the service's published list (same site). -->
+  <meta name="sovrasign-trust" content="/v1/identity/trust.json">
+  <meta name="sovrasign-trust-list" content="/v1/trust/trust.json">
+  <meta name="sovrasign-evidence-keys" content="/v1/evidence/jwks">
+  <title>Sovrasign Verify</title>
+  <link rel="stylesheet" href="verify.css">
+</head>
+<body>
+  <!-- The credit line names no engine; it links to the public repository,
+       github.com/sovrasign/verify, once that repository exists. -->
+  <!-- The brand symbol (brand/sovrasign/symbol.svg, inline so the page loads nothing else);
+       its colour comes from verify.css, light and dark. It links to the Sovrasign home page. -->
+  <header class="top">
+    <p class="brand"><a class="home" href="../site/"><svg class="logo" viewBox="0 0 44.17 51.06" width="22" height="26" aria-hidden="true" focusable="false"><g transform="translate(28.88 24.53) scale(1)"><path d="M4.57 -14.79L4.29 -15.32L3.97 -15.83L3.63 -16.32L3.26 -16.79L2.85 -17.23L2.42 -17.64L1.97 -18.03L1.49 -18.39L0.99 -18.71L0.47 -19.01L-0.07 -19.27L-0.63 -19.49L-1.19 -19.68L-1.77 -19.83L-2.36 -19.95L-2.95 -20.03L-3.55 -20.07L-4.15 -20.07L-4.74 -20.03L-5.34 -19.96L-5.92 -19.85L-6.5 -19.7L-7.07 -19.51L-7.63 -19.29L0.14 -22.75L0.69 -22.97L1.26 -23.16L1.84 -23.3L2.43 -23.42L3.02 -23.49L3.62 -23.52L4.22 -23.52L4.81 -23.48L5.41 -23.4L5.99 -23.29L6.57 -23.14L7.14 -22.95L7.69 -22.72L8.23 -22.46L8.75 -22.17L9.25 -21.84L9.73 -21.49L10.19 -21.1L10.62 -20.68L11.02 -20.24L11.4 -19.78L11.74 -19.29L12.05 -18.78L12.33 -18.25ZM0.14 -22.75L-0.4 -22.49L-0.93 -22.21L-1.43 -21.88L-1.91 -21.53L-2.37 -21.15L-2.81 -20.73L-3.21 -20.3L-3.59 -19.83L-3.94 -19.35L-4.25 -18.84L-4.54 -18.31L-4.78 -17.77L-5 -17.21L-5.18 -16.64L-5.32 -16.06L-5.42 -15.47L-5.49 -14.87L-5.52 -14.28L-5.51 -13.68L-5.46 -13.08L-5.37 -12.49L-5.25 -11.91L-5.09 -11.33L-4.9 -10.77L-4.66 -10.21L-4.4 -9.68L-4.1 -9.16L-3.77 -8.66L-3.4 -8.19L-3.01 -7.74L-2.59 -7.31L-2.14 -6.91L-1.69 -6.54L-1.24 -6.16L-0.78 -5.78L-0.33 -5.4L0.12 -5.02L0.58 -4.64L1.03 -4.26L1.48 -3.88L1.94 -3.51L2.39 -3.13L2.84 -2.75L3.3 -2.37L3.75 -1.99L4.2 -1.61L4.66 -1.23L5.11 -0.85L5.56 -0.48L6.02 -0.1L6.47 0.28L6.92 0.66L7.38 1.04L7.83 1.42L8.28 1.8L8.74 2.18L9.19 2.55L9.64 2.93L10.1 3.31L10.55 3.69L10.99 4.08L11.41 4.5L11.81 4.94L12.18 5.4L12.52 5.88L12.84 6.38L13.12 6.9L13.38 7.43L13.6 7.98L13.8 8.54L13.96 9.11L14.09 9.68L14.19 10.27L14.25 10.85L14.28 11.45L14.28 12.04L14.24 12.63L14.17 13.21L14.06 13.8L13.93 14.37L13.76 14.94L13.55 15.49L13.32 16.04L13.06 16.57L12.76 17.08L12.44 17.58L12.09 18.05L11.72 18.51L11.32 18.95L10.89 19.36L10.44 19.74L9.97 20.1L9.48 20.43L8.98 20.74L8.45 21.01L0.69 24.47L1.21 24.2L1.72 23.89L2.21 23.56L2.68 23.2L3.13 22.81L3.55 22.4L3.95 21.97L4.33 21.51L4.68 21.03L5 20.54L5.29 20.02L5.56 19.5L5.79 18.95L5.99 18.4L6.16 17.83L6.3 17.25L6.4 16.67L6.47 16.08L6.51 15.49L6.51 14.9L6.49 14.31L6.42 13.72L6.33 13.14L6.2 12.56L6.03 11.99L5.84 11.44L5.61 10.89L5.36 10.36L5.07 9.84L4.76 9.34L4.41 8.86L4.04 8.4L3.65 7.96L3.23 7.54L2.79 7.15L2.33 6.77L1.88 6.39L1.42 6.01L0.97 5.63L0.52 5.25L0.06 4.87L-0.39 4.5L-0.84 4.12L-1.3 3.74L-1.75 3.36L-2.2 2.98L-2.66 2.6L-3.11 2.22L-3.56 1.84L-4.02 1.47L-4.47 1.09L-4.92 0.71L-5.38 0.33L-5.83 -0.05L-6.28 -0.43L-6.74 -0.81L-7.19 -1.18L-7.64 -1.56L-8.1 -1.94L-8.55 -2.32L-9 -2.7L-9.46 -3.08L-9.91 -3.46L-10.36 -3.86L-10.78 -4.28L-11.17 -4.73L-11.53 -5.21L-11.86 -5.7L-12.16 -6.22L-12.43 -6.76L-12.66 -7.31L-12.86 -7.87L-13.02 -8.45L-13.14 -9.03L-13.22 -9.63L-13.27 -10.22L-13.28 -10.82L-13.25 -11.42L-13.19 -12.01L-13.08 -12.6L-12.94 -13.18L-12.76 -13.75L-12.55 -14.31L-12.3 -14.85L-12.02 -15.38L-11.7 -15.89L-11.35 -16.38L-10.98 -16.84L-10.57 -17.28L-10.14 -17.69L-9.68 -18.07L-9.2 -18.43L-8.69 -18.75L-8.17 -19.04L-7.63 -19.29ZM0.69 24.47L0.15 24.72L-0.4 24.93L-0.96 25.11L-1.54 25.26L-2.12 25.38L-2.7 25.46L-3.29 25.51L-3.88 25.53L-4.48 25.53L-5.08 25.53L-5.68 25.53L-6.28 25.53L-6.88 25.53L-7.48 25.53L-8.08 25.53L-8.68 25.53L-9.28 25.53L-9.88 25.53L-10.48 25.53L-11.08 25.53L-11.68 25.53L-12.28 25.53L-12.88 25.53L-13.48 25.53L-14.08 25.53L-14.68 25.53L-15.28 25.53L-15.88 25.53L-16.48 25.53L-17.08 25.53L-17.68 25.53L-18.28 25.53L-18.88 25.53L-19.48 25.53L-20.08 25.53L-20.68 25.53L-21.28 25.53L-21.88 25.53L-22.48 25.53L-23.08 25.53L-23.68 25.53L-24.28 25.53L-24.88 25.53L-25.48 25.53L-26.08 25.53L-26.68 25.53L-27.28 25.53L-27.88 25.53L-20.12 22.07L-19.52 22.07L-18.92 22.07L-18.32 22.07L-17.72 22.07L-17.12 22.07L-16.52 22.07L-15.92 22.07L-15.32 22.07L-14.72 22.07L-14.12 22.07L-13.52 22.07L-12.92 22.07L-12.32 22.07L-11.72 22.07L-11.12 22.07L-10.52 22.07L-9.92 22.07L-9.32 22.07L-8.72 22.07L-8.12 22.07L-7.52 22.07L-6.92 22.07L-6.32 22.07L-5.72 22.07L-5.12 22.07L-4.52 22.07L-3.92 22.07L-3.32 22.07L-2.72 22.07L-2.12 22.07L-1.52 22.07L-0.92 22.07L-0.32 22.07L0.28 22.07L0.88 22.07L1.48 22.07L2.08 22.07L2.68 22.07L3.28 22.07L3.88 22.07L4.47 22.05L5.06 22L5.65 21.92L6.23 21.8L6.8 21.65L7.36 21.47L7.91 21.26L8.45 21.01Z"/></g></svg><span>Sovrasign</span></a> <strong>Verify</strong></p>
+    <p class="credit">Sovrasign Verify · open source</p>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="intro-h">
+      <h1 id="intro-h">Check a signed PDF</h1>
+      <p>See who signed it, how each signer proved who they are, and that nothing changed after
+        signing. <strong>Your file never leaves your device</strong>: the check runs in this
+        browser.</p>
+    </section>
+
+    <p class="notice" id="dev-trust" hidden>This trust list includes the test sign-in, which lets
+      anyone sign as anyone. Development only: a valid result here proves nothing about a person.</p>
+
+    <section class="card" aria-labelledby="pick-h">
+      <h2 id="pick-h" class="visually-hidden">Choose a signed PDF</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="pdf" accept="application/pdf,.pdf">
+        <span class="drop-main" id="drop-text" data-touch="Choose a signed PDF">Drop a signed PDF here, or choose a file</span>
+        <span class="drop-sub">It is read on this device and never uploaded.</span>
+      </label>
+      <p id="handoff" class="muted" role="status" hidden></p>
+    </section>
+
+    <section id="result" aria-live="polite" hidden>
+      <div id="verdict" class="verdict" tabindex="-1">
+        <h2 id="verdict-title"></h2>
+        <p id="verdict-line"></p>
+      </div>
+
+      <div class="card" id="summary-card">
+        <h2 id="doc-title"></h2>
+        <div id="summary"></div>
+        <div class="actions">
+          <button id="certificate" type="button">Download the certificate of completion</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Signers</h2>
+        <ol id="revisions" class="revisions"></ol>
+      </div>
+
+      <div id="timestamps"></div>
+      <div id="problems"></div>
+
+      <details class="card">
+        <summary>Activity recorded in the document</summary>
+        <ol id="audit" class="audit"></ol>
+      </details>
+    </section>
+
+    <details class="card" id="technical">
+      <summary>Technical details and trust list</summary>
+      <div id="technical-body">
+        <h3>Trusted sign-in providers</h3>
+        <p class="muted">A signer's identity counts only if the provider key that vouched for them
+          is in this trust list. <span id="trust-source"></span></p>
+        <ul id="issuers" class="issuers"></ul>
+        <div class="actions">
+          <button id="fetch-keys" type="button">Fetch the providers' current keys</button>
+          <button id="load-trust" type="button" class="secondary">Load a trust.json</button>
+          <input type="file" id="trust-file" accept="application/json,.json" hidden>
+          <button id="export-trust" type="button" class="secondary">Export this trust list</button>
+          <button id="use-published" type="button" class="secondary" hidden>Use Sovrasign's published list</button>
+        </div>
+        <p id="trust-status" class="muted" role="status"></p>
+        <div id="tech-report" hidden>
+          <h3>Report</h3>
+          <dl id="tech" class="tech"></dl>
+          <details>
+            <summary>Raw report (JSON)</summary>
+            <pre id="raw" tabindex="0" aria-label="Raw report"></pre>
+          </details>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <footer>
+    <p>Sovrasign Verify runs in your browser. It doesn’t send your document anywhere.</p>
+  </footer>
+  <script type="module" src="verify.js"></script>
+</body>
+</html>

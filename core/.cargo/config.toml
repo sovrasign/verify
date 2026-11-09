@@ -1,0 +1,5 @@
+# getrandom 0.4 selects its backend with a cfg flag; signpdf-wasm provides a "custom" one: always
+# failing in the verify-only build (verification never draws randomness), the page's
+# crypto.getRandomValues in the `signing` build. Applies only when building for wasm32.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="custom"']

@@ -1,0 +1,30 @@
+[package]
+name = "signpdf-cli"
+description = "Command-line front-end and reference verifier for the SignPDF engine."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "signpdf"
+path = "src/main.rs"
+
+[dependencies]
+signpdf-core = { path = "../signpdf-core", features = ["test-issuer", "typed"] }
+signpdf-auth = { path = "../signpdf-auth" }
+serde = { workspace = true }
+serde_json.workspace = true
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+# HTTP-only client for the RFC 3161 TSA POST. RFC 3161 tokens are themselves signed, so TSAs
+# are conventionally served over plain HTTP (e.g. http://timestamp.digicert.com); dropping the
+# TLS feature avoids a `ring`/clang build dependency. An https TSA would need a tls feature.
+ureq = { version = "2", default-features = false }
+
+[features]
+# Enable real-provider OIDC over https (Google/Microsoft/Apple). Off by default so the standard
+# build needs no TLS toolchain; the `--oidc` flow still works against http issuers without it.
+# Build with: `cargo build -p signpdf-cli --features oidc-tls`.
+default = []
+oidc-tls = ["signpdf-auth/tls"]

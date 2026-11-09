@@ -1,0 +1,14 @@
+{
+  "attack": "Alice's revision fills the price field assigned to Bob.",
+  "security_model_row": "Malicious signer changing terms, other slots, others' fields, history",
+  "regression_test": "security_e2e::malicious_signer_cannot_fill_another_signers_field",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "field_tampered"
+  ],
+  "warnings": []
+}

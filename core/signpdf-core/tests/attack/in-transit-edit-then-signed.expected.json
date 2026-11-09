@@ -1,0 +1,17 @@
+{
+  "attack": "Someone loosens Bob's slot in transit (an unsigned update), and Alice's client signs on top of it without its integrity check.",
+  "security_model_row": "Envelope edited in transit before a signer signs",
+  "regression_test": "security_e2e::signature_over_an_unsigned_in_transit_edit_is_detected",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "terms_changed",
+    "unsigned_insertion"
+  ],
+  "warnings": [
+    "slot_policy_weak"
+  ]
+}

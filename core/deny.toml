@@ -1,0 +1,76 @@
+# cargo-deny (docs/SUPPLY_CHAIN.md): advisories,
+# licences, banned or duplicated crates and crate sources of the engine's dependency tree.
+# Run as `cargo deny --locked check` in core/, locally and in CI on every pull request that changes
+# a lockfile. cargo vet is the audit gate; this file is the policy gate.
+
+[graph]
+# Every target the engine ships for: the desktop app (Windows, macOS, Linux) and the browser.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "wasm32-unknown-unknown",
+]
+all-features = true
+
+[advisories]
+# Any advisory (vulnerability, unmaintained, unsound, yanked) fails, except those listed here with
+# the reason they do not apply.
+unmaintained = "all"
+yanked = "deny"
+ignore = [
+    # rsa "Marvin" timing side channel: affects RSA *private-key* operations. SignPDF only
+    # verifies RSA signatures with public keys (identity-provider tokens, TSA certificates);
+    # private RSA keys exist only in the test-issuer feature. Same exception as `cargo audit` in
+    # the `audit` part.
+    { id = "RUSTSEC-2023-0071", reason = "RSA private-key timing; the engine only verifies with public keys" },
+    # ttf-parser is unmaintained (no vulnerability): lopdf and the engine read font metrics with
+    # it. Move to skrifa (the suggested replacement) when lopdf does.
+    { id = "RUSTSEC-2026-0192", reason = "unmaintained, no known vulnerability; follow-up to replace it" },
+]
+
+[licenses]
+# Licences compatible with distributing the engine under MIT OR Apache-2.0 (permissive, no
+# copyleft that would bind the combined work). A new licence needs a decision, not an entry here.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "0BSD",
+    "BSL-1.0",
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+[bans]
+# Two versions of one crate are allowed (a dependency upgrade in progress), but shown: the
+# cryptography crates especially should converge on one generation (see Cargo.toml).
+multiple-versions = "warn"
+# A `*` version requirement on a crates.io dependency. The workspace's own path dependencies have
+# no version (the crates are not published), which cargo-deny also counts as wildcards: warn.
+wildcards = "warn"
+highlight = "all"
+deny = [
+    # OpenSSL: the signing stack is pure Rust on purpose (no C toolchain, one code base for
+    # desktop and WASM). Only the sign-in client's HTTPS (signpdf-auth and the CLI, through
+    # native-tls: the platform's TLS, which is OpenSSL on Linux) may use it.
+    { crate = "native-tls", wrappers = ["signpdf-auth", "ureq"], reason = "platform TLS for the sign-in client only" },
+    { crate = "openssl", wrappers = ["native-tls"], reason = "the signing stack is pure Rust (Cargo.toml)" },
+    { crate = "openssl-sys", wrappers = ["native-tls", "openssl"], reason = "the signing stack is pure Rust (Cargo.toml)" },
+]
+
+[sources]
+# crates.io only: no git dependencies and no other registries.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

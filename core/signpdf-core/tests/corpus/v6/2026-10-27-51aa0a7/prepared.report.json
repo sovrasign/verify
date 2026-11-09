@@ -1,0 +1,264 @@
+{
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "original_len": 23225,
+  "document_sha256": "12cf99c8c28a6c001232f25819e8c6ca95f270d1a9acb63f2624126b28f6773b",
+  "complete": false,
+  "declined": false,
+  "audit_ok": true,
+  "order_ok": true,
+  "preparer": {
+    "index": 0,
+    "kind": "prepared",
+    "signer_id": "",
+    "actor_fingerprint": "3b19aabb7a41a8de31e4c467404ac01b48a0d3f1a036d343e8d690604a561b75",
+    "signed_at": "2026-10-27T18:34:35.8010334Z",
+    "time_source": "device",
+    "token_issued_at": "2026-10-27T18:34:30Z",
+    "valid": true,
+    "detail": "preparer signature valid; identity verified as alice@example.com via https://issuer.test",
+    "idp_email": "alice@example.com",
+    "idp_issuer": "https://issuer.test",
+    "level": "L2",
+    "basis": [
+      {
+        "method": "account",
+        "issuer": "https://issuer.test"
+      }
+    ],
+    "identity_trust": "insecure-dev",
+    "signature_code": "3b19aabb"
+  },
+  "signatures": [],
+  "messages": [],
+  "warnings": [
+    "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+  ],
+  "service_link": "https://sign.example.com/envelopes/demo-nda",
+  "pades_level": "B-B",
+  "algorithm_policy": {
+    "version": 1,
+    "source": "builtin"
+  },
+  "envelope": {
+    "schema_version": 6,
+    "envelope_id": "bc1a547f9db758915303c3608d8f28c5",
+    "title": "Mutual NDA",
+    "created_by": "alice@example.com",
+    "created_at": "2026-10-27T18:34:35.8010334Z",
+    "created_by_pubkey": "BNlRXFThH5zU3e4PUrQypgsIAsDaHKJfRpidcdFnPF4ZFpZBOQcgmEMgTYxMblI0U7+yGFaGV8R48Mv9KzuR1Uk=",
+    "created_by_id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5MzEyOTY3NSwiaWF0IjoxNzkzMTI2MDcwLCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiJjMWQwNmVmMmE1MmE2ODllOTI5OWJlZGNkYjg1MmI2YjQ3ZDc1ZWI5NjI4MWEwZjczYzY4YzYwYWZjNjZjM2NhIiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.Gz3mcKZt5NMDhb7X1a9CpnLpqijLcyLhgyRN25lDJhj0lkOxY_tsOXYfD_1M_86dzGUAMawpW7w18bBh3ihDQw",
+    "created_by_idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"gqa_-_do-GwwLWhRhDC8lHcHwAIyzF0q3YkruvFawzo\",\"y\":\"ulkd1NaBk91g-Oz0txEXKU7seMlQf11z0w1BZ3Bq7OE\"}",
+    "created_by_issuer": "https://issuer.test",
+    "created_by_email": "alice@example.com",
+    "created_by_audience": "signpdf-cli-dev",
+    "source_digest": "1c10adb524c6c3d5a5a8e86b5fe61ef13aab69ee1d7924c2571659655dfd5085",
+    "source_len": 607,
+    "signers": [
+      {
+        "id": "s1",
+        "name": "Alice",
+        "handle": "alice@example.com",
+        "role": "Disclosing Party",
+        "order": 1,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "alice@example.com",
+          "min_level": "L1"
+        }
+      },
+      {
+        "id": "s2",
+        "name": "Bob",
+        "handle": "bob@example.com",
+        "role": "Receiving Party",
+        "order": 2,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "bob@example.com",
+          "required_domain": "example.com",
+          "min_level": "L3",
+          "required_methods": [
+            "organization"
+          ]
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "f1",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 120.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "d1",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 180.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true,
+        "date_format": "DD/MM/YYYY",
+        "signing_date": true
+      },
+      {
+        "id": "f2",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 260.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "t2",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 320.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "accept",
+        "field_type": "checkbox",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 380.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "I have read and accept this NDA"
+      },
+      {
+        "id": "copy-email",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 430.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By email",
+        "group": "Send my copy"
+      },
+      {
+        "id": "copy-post",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 408.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By post",
+        "group": "Send my copy"
+      },
+      {
+        "id": "notes",
+        "field_type": "multiline",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 470.0,
+          "w": 240.0,
+          "h": 44.0
+        },
+        "assigned_signer": "s2",
+        "required": false,
+        "label": "Delivery notes"
+      },
+      {
+        "id": "format",
+        "field_type": "dropdown",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 530.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Copy format",
+        "options": [
+          "Paper",
+          "PDF"
+        ]
+      },
+      {
+        "id": "start",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 590.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Start date",
+        "date_format": "MM/DD/YYYY"
+      }
+    ],
+    "policy": {
+      "signing_order": "sequential",
+      "allowed_signature_types": [
+        "PAdES"
+      ],
+      "signature_timestamps": "required"
+    },
+    "signatures": [],
+    "audit_log": [
+      {
+        "seq": 0,
+        "action": "prepared",
+        "actor_fingerprint": "3b19aabb7a41a8de31e4c467404ac01b48a0d3f1a036d343e8d690604a561b75",
+        "actor_name": "alice@example.com",
+        "at": "2026-10-27T18:34:35.8010334Z",
+        "details": "prepared 'Mutual NDA' for 2 signer(s); preparer verified as alice@example.com via https://issuer.test",
+        "prev_hash": "GENESIS",
+        "entry_hash": "ea27472b22d349ca83124c1280a0534e21fbd45139e25041a99637c0dcaaa3ae",
+        "signature": "MEUCIQC8zXTPYYOhI6TsWF0BctRDwh+EAhMMcgzbhC57jEiDfgIgZqcYshcXXDkRvEki7j4YY6bn6/34S/2O8DpLaeNMFrI="
+      }
+    ],
+    "service_link": "https://sign.example.com/envelopes/demo-nda"
+  }
+}

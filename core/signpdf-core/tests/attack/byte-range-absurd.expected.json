@@ -1,0 +1,15 @@
+{
+  "attack": "The last signature's ByteRange claims a second range far beyond the file.",
+  "security_model_row": "Signature wrapping / ByteRange games",
+  "regression_test": "security_e2e::absurd_byte_range_does_not_panic",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "signature_malformed",
+    "unsigned_changes"
+  ],
+  "warnings": []
+}

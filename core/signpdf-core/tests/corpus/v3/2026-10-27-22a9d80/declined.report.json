@@ -1,0 +1,298 @@
+{
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "original_len": 79667,
+  "document_sha256": "ee84b327735a3dfc5535f04b53ccadec4c8787cb452bfb395ce874be4cc19091",
+  "complete": false,
+  "declined": true,
+  "audit_ok": true,
+  "order_ok": true,
+  "preparer": {
+    "index": 0,
+    "kind": "prepared",
+    "signer_id": "",
+    "actor_fingerprint": "95dd17a67b56107073444692eab8da2b5dcd921bb6f53aef7a01d7c88c238a48",
+    "signed_at": "2026-10-27T08:19:39.1178562Z",
+    "time_source": "device",
+    "valid": true,
+    "detail": "preparer signature valid; identity verified as alice@example.com via https://issuer.test",
+    "idp_email": "alice@example.com",
+    "idp_issuer": "https://issuer.test",
+    "assurance": "consumer",
+    "identity_trust": "insecure-dev",
+    "signature_code": "95dd17a6"
+  },
+  "signatures": [
+    {
+      "index": 1,
+      "kind": "declined",
+      "signer_id": "s1",
+      "actor_fingerprint": "5fda6710fa36ec8a3df7397d2029518f5a5e5a0d3dccf4b109230fd59981da89",
+      "signed_at": "2026-10-27T08:19:39.5420533Z",
+      "time_source": "device",
+      "valid": true,
+      "detail": "PAdES signature valid; identity verified as alice@example.com via https://issuer.test",
+      "idp_email": "alice@example.com",
+      "idp_issuer": "https://issuer.test",
+      "assurance": "consumer",
+      "identity_trust": "insecure-dev",
+      "signature_code": "5fda6710"
+    }
+  ],
+  "messages": [],
+  "warnings": [
+    "signer 's1' has no signature timestamp although the envelope requires one (the time-stamp authority may have been unreachable): its signing time is the signer's device clock",
+    "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+  ],
+  "service_link": "https://sign.example.com/envelopes/demo-nda",
+  "pades_level": "B-B",
+  "envelope": {
+    "schema_version": 3,
+    "envelope_id": "a078a937c74e32a41cdf1c0f969dd0ea",
+    "title": "Mutual NDA",
+    "created_by": "alice@example.com",
+    "created_at": "2026-10-27T08:19:39.1178562Z",
+    "created_by_pubkey": "BFVpOFIFLpb8Ml16hLrC7ojkVABCcCQA9nqoU3iVgC3i1SN+bP5HM9ZAA471w41j2usxq6YjjYdLM0zs9B5CZBQ=",
+    "created_by_id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5MzA5Mjc3OSwiaWF0IjoxNzkzMDg5MTc0LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiI4NGIwZDk4ZjRjNDZjNGU1NDYwMGM5NDMyMjlhZTMwZDM4M2YyZTg4MjhlMjkyODM0MWI1OTU4MzEzZjdkNWMxIiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.gL8sh6U6MgNmPi-_oaJ0oqUxk_e2fNU3eY0kHkL72z2_drtI9oLBcX2cuhn7IurlblGmDvzWnCpbsuumhmUCPw",
+    "created_by_idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"8QLeBwQlHcrwlVGg8Yu2l57lAclMxrsybYQPFAu566E\",\"y\":\"GdojxHc1YUWepASn7pNzsxSYyrWfhVE0jC-1zygLUHs\"}",
+    "created_by_issuer": "https://issuer.test",
+    "created_by_email": "alice@example.com",
+    "created_by_audience": "signpdf-cli-dev",
+    "source_digest": "1c10adb524c6c3d5a5a8e86b5fe61ef13aab69ee1d7924c2571659655dfd5085",
+    "source_len": 607,
+    "signers": [
+      {
+        "id": "s1",
+        "name": "Alice",
+        "handle": "alice@example.com",
+        "role": "Disclosing Party",
+        "order": 1,
+        "status": "declined",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "alice@example.com",
+          "min_assurance": "consumer"
+        },
+        "public_key": "BEmv36/z0X2bHz2PCSsjeEXn2xPy/MWYV+clKSeD8I0h70q/oB92DAPoiTP2vXs8oHDfDG1UGDdtCS//YKrn3B4=",
+        "fingerprint": "5fda6710fa36ec8a3df7397d2029518f5a5e5a0d3dccf4b109230fd59981da89"
+      },
+      {
+        "id": "s2",
+        "name": "Bob",
+        "handle": "bob@example.com",
+        "role": "Receiving Party",
+        "order": 2,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "bob@example.com",
+          "min_assurance": "consumer"
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "f1",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 120.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "d1",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 180.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true,
+        "date_format": "DD/MM/YYYY",
+        "signing_date": true
+      },
+      {
+        "id": "f2",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 260.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "t2",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 320.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "accept",
+        "field_type": "checkbox",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 380.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "I have read and accept this NDA"
+      },
+      {
+        "id": "copy-email",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 430.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By email",
+        "group": "Send my copy"
+      },
+      {
+        "id": "copy-post",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 408.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By post",
+        "group": "Send my copy"
+      },
+      {
+        "id": "notes",
+        "field_type": "multiline",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 470.0,
+          "w": 240.0,
+          "h": 44.0
+        },
+        "assigned_signer": "s2",
+        "required": false,
+        "label": "Delivery notes"
+      },
+      {
+        "id": "format",
+        "field_type": "dropdown",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 530.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Copy format",
+        "options": [
+          "Paper",
+          "PDF"
+        ]
+      },
+      {
+        "id": "start",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 590.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Start date",
+        "date_format": "MM/DD/YYYY"
+      }
+    ],
+    "policy": {
+      "signing_order": "sequential",
+      "allowed_signature_types": [
+        "PAdES"
+      ],
+      "signature_timestamps": "required"
+    },
+    "signatures": [
+      {
+        "kind": "declined",
+        "signer_id": "s1",
+        "fingerprint": "5fda6710fa36ec8a3df7397d2029518f5a5e5a0d3dccf4b109230fd59981da89",
+        "public_key": "BEmv36/z0X2bHz2PCSsjeEXn2xPy/MWYV+clKSeD8I0h70q/oB92DAPoiTP2vXs8oHDfDG1UGDdtCS//YKrn3B4=",
+        "algorithm": "ECDSA_P256_SHA256",
+        "signed_at": "2026-10-27T08:19:39.5420533Z",
+        "doc_digest": "e319e67afaddf988a5a7021b9be74d4e92a36de388915d5978ae666bb6a151ab",
+        "signed_prefix_len": 23177,
+        "signature": "MEUCIHSN3nH4liGvrq/I5N770CZGmnS016TOLTBpDWy0odpIAiEAuSv+R9Jit2gzoMw2hIeCeYPpeWWkCPtQgzXUPZKTYhY=",
+        "revision": 0,
+        "id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5MzA5Mjc3OSwiaWF0IjoxNzkzMDg5MTc0LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiIyYjU1ZjNlYTZmMWQ1OWE0ZDRmMzdkZTIwNGY0ODY0ZjRmMDhlYzdjYTgxYTM3Yzg5MGVlNTZlMzYxNDE0OTM3Iiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.UuVNL07sf4q5AG7Fft6qnhbBHu714WxDPuG5essOo-JtwHwZIsmZ_kznkva-o0i7MDKn9OilWmPyJGQ1JsNlPw",
+        "idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"kXb5L1UKs7cKtvkKsJsH-eIQx6M8aNlTz-fOcN1DDKg\",\"y\":\"oeUhifq0D_IlH-fiCqJCzlNBmWm_DX0idhBkeTvhbgA\"}",
+        "idp_issuer": "https://issuer.test",
+        "idp_subject": "dev|alice@example.com",
+        "idp_email": "alice@example.com",
+        "idp_audience": "signpdf-cli-dev"
+      }
+    ],
+    "audit_log": [
+      {
+        "seq": 0,
+        "action": "prepared",
+        "actor_fingerprint": "95dd17a67b56107073444692eab8da2b5dcd921bb6f53aef7a01d7c88c238a48",
+        "actor_name": "alice@example.com",
+        "at": "2026-10-27T08:19:39.1178562Z",
+        "details": "prepared 'Mutual NDA' for 2 signer(s); preparer verified as alice@example.com via https://issuer.test",
+        "prev_hash": "GENESIS",
+        "entry_hash": "d9f45add4dfc252c16dfba107deccb2f315a76146a8f68888ea7f51861d931ef",
+        "signature": "MEYCIQCbgM7HfUUl5fZWd5WAQt/ZyIC1WzcSHyT/ZssvSYotPAIhAL04gAh04FWwssr7ys+AgQjRfmREtPsGS4/o+Ingf60V"
+      },
+      {
+        "seq": 1,
+        "action": "declined",
+        "actor_fingerprint": "5fda6710fa36ec8a3df7397d2029518f5a5e5a0d3dccf4b109230fd59981da89",
+        "actor_name": "alice@example.com",
+        "at": "2026-10-27T08:19:39.5420533Z",
+        "details": "alice@example.com declined to sign (Corpus fixture: the first signer declines); verified as alice@example.com via https://issuer.test",
+        "prev_hash": "d9f45add4dfc252c16dfba107deccb2f315a76146a8f68888ea7f51861d931ef",
+        "entry_hash": "3d97e182dee5084acb191db20cbd0afef428ffdf7020a7885b5a1b873420a5bd",
+        "signature": "MEUCIQDz/JB1W71c9d+ult8sCV4RLoqlTtsKWM7NH2kH0Fs1vwIgXz8Wp3LCg+77KBTMJMIGtEma3dlgu9QM5H23IotTy9g="
+      }
+    ],
+    "service_link": "https://sign.example.com/envelopes/demo-nda"
+  }
+}

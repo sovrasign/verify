@@ -1,0 +1,4 @@
+{
+  "comment": "The trust-list key chain (P-256 JWKs) every client pins, in order: the key in use, then the next_keys it pre-committed (spec/envelope-format.md §9.2, the key-chain rule: a list signed by a later key wins over any sequence from an earlier one). Empty until production's trust-list key exists: the archive job refuses every list until then.",
+  "keys": []
+}

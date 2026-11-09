@@ -1,0 +1,309 @@
+//! Distrusting one timestamp authority from a time (`tsa_distrusted` in the trust store; spec
+//! §9.1, `docs/SECURITY_MODEL.md` §4): a timestamp whose chain holds a distrusted certificate and
+//! whose `genTime` is at or after `distrusted_after` is not trusted time, earlier ones still are,
+//! and other authorities under the same root are unaffected.
+//!
+//! The shared vectors (`spec/vectors/tsa-distrust/`) are checked here; regenerate them with
+//! `SIGNPDF_WRITE_VECTORS=1 cargo test -p signpdf-core --test tsa_distrust`.
+
+mod common;
+
+use std::path::PathBuf;
+
+use common::*;
+use serde_json::{json, Value};
+use signpdf_core::ltv::testing::TestCa;
+use signpdf_core::timestamp::testing::TestTsa;
+use signpdf_core::trust::cert_sha256_hex;
+use signpdf_core::{
+    container, embed_document_timestamp, prepare, prepare_document_timestamp, sign, verify,
+    TimestampPolicy, TrustStore, VerificationReport,
+};
+
+fn rfc3339(t: i64) -> String {
+    time::OffsetDateTime::from_unix_timestamp(t)
+        .unwrap()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap()
+}
+
+/// A Free envelope (no signature timestamps) that Alice and Bob signed.
+fn free_completed() -> Vec<u8> {
+    let pdf = container::make_sample_pdf("Mutual NDA");
+    let (key, mut req) = two_signer_request(&pdf);
+    req.policy.signature_timestamps = TimestampPolicy::None;
+    let p = prepare(&pdf, &req, &key).unwrap();
+    let signed = |pdf: &[u8], email: &str| {
+        let (key, req) = signer_request(email, pdf, "");
+        sign(pdf, &key, &req).unwrap()
+    };
+    let alice = signed(&p, "alice@example.com");
+    signed(&alice, "bob@example.com")
+}
+
+/// `pdf` with a document timestamp from `tsa` dated `at` (Unix seconds).
+fn stamped_at(pdf: &[u8], tsa: &TestTsa, at: i64) -> Vec<u8> {
+    let (prepared, digest) = prepare_document_timestamp(pdf).unwrap();
+    embed_document_timestamp(&prepared, &tsa.stamp(&digest, &rfc3339(at))).unwrap()
+}
+
+/// The test identity provider, its tokens counting only with trusted time (as for a service's
+/// own email-code provider), and `anchor` as the timestamp anchor.
+fn trust_requiring_time(anchor: &[u8]) -> TrustStore {
+    let mut t = trust();
+    t.add_tsa_anchor(anchor);
+    t.set_requires_trusted_time(ISSUER, true).unwrap();
+    t
+}
+
+fn codes(report: &VerificationReport) -> Vec<&str> {
+    report.findings.iter().map(|f| f.code.as_str()).collect()
+}
+
+fn stamp_trusted(report: &VerificationReport) -> bool {
+    report
+        .document_timestamps
+        .iter()
+        .all(|d| d.timestamp.is_trusted())
+}
+
+// --- the shared vectors -----------------------------------------------------------------------
+
+fn vectors_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../spec/vectors/tsa-distrust")
+}
+
+/// The trust files of the vectors: the stamp's time `g`, and `distrusted_after` one second
+/// after it (still trusted), at it, and one second before it (both not trusted).
+fn vector_trusts(
+    base: &TrustStore,
+    tsa_cert: &[u8],
+    g: i64,
+) -> Vec<(&'static str, TrustStore, bool)> {
+    let at = |name: &'static str, t: i64, trusted: bool| {
+        let mut s = base.clone();
+        s.distrust_tsa(
+            &cert_sha256_hex(tsa_cert),
+            &rfc3339(t),
+            Some("SignPDF Test TSA".into()),
+        )
+        .unwrap();
+        (name, s, trusted)
+    };
+    vec![
+        ("none", base.clone(), true),
+        ("after-stamp", at("after-stamp", g + 1, true).1, true),
+        ("at-stamp", at("at-stamp", g, false).1, false),
+        ("before-stamp", at("before-stamp", g - 1, false).1, false),
+    ]
+}
+
+fn write_vectors() {
+    let dir = vectors_dir();
+    std::fs::create_dir_all(&dir).unwrap();
+    let tsa = TestTsa::new();
+    let g = now_unix() + 120;
+    let pdf = stamped_at(&free_completed(), &tsa, g);
+    std::fs::write(dir.join("stamped.pdf"), &pdf).unwrap();
+    let base = trust_requiring_time(&tsa.cert_der());
+    let mut expected = Vec::new();
+    for (name, store, trusted) in vector_trusts(&base, &tsa.cert_der(), g) {
+        let file = format!("trust-{name}.json");
+        std::fs::write(dir.join(&file), store.to_json().unwrap()).unwrap();
+        let report = verify(&pdf, &store).unwrap();
+        assert_eq!(stamp_trusted(&report), trusted, "{name}");
+        expected.push(json!({
+            "trust": file,
+            "valid": report.valid,
+            "integrity_ok": report.integrity_ok,
+            "identities_trusted": report.identities_trusted,
+            "trusted_time_pending": report.trusted_time_pending,
+            "timestamp_trusted": trusted,
+            "tsa_distrusted_warning": !trusted,
+        }));
+    }
+    let out = json!({
+        "about": "Shared test vectors for distrusting a timestamp authority from a time (spec/envelope-format.md §9.1, §12.4). stamped.pdf is a completed two-signer envelope with one document timestamp; its identity provider counts only with trusted time. GENERATED by core/signpdf-core/tests/tsa_distrust.rs (SIGNPDF_WRITE_VECTORS=1); CC0 1.0.",
+        "pdf": "stamped.pdf",
+        "stamp_time": rfc3339(g),
+        "cases": expected,
+    });
+    std::fs::write(
+        dir.join("expected.json"),
+        serde_json::to_string_pretty(&out).unwrap() + "\n",
+    )
+    .unwrap();
+}
+
+#[test]
+fn the_shared_vectors_hold() {
+    if std::env::var_os("SIGNPDF_WRITE_VECTORS").is_some() {
+        write_vectors();
+    }
+    let dir = vectors_dir();
+    let expected: Value =
+        serde_json::from_slice(&std::fs::read(dir.join("expected.json")).unwrap()).unwrap();
+    let pdf = std::fs::read(dir.join(expected["pdf"].as_str().unwrap())).unwrap();
+    let cases = expected["cases"].as_array().unwrap();
+    assert_eq!(cases.len(), 4);
+    for case in cases {
+        let file = case["trust"].as_str().unwrap();
+        let store = TrustStore::from_json_bytes(&std::fs::read(dir.join(file)).unwrap()).unwrap();
+        let report = verify(&pdf, &store).unwrap();
+        let trusted = case["timestamp_trusted"].as_bool().unwrap();
+        assert_eq!(stamp_trusted(&report), trusted, "{file}");
+        assert_eq!(report.valid, case["valid"].as_bool().unwrap(), "{file}");
+        assert_eq!(
+            report.integrity_ok,
+            case["integrity_ok"].as_bool().unwrap(),
+            "{file}"
+        );
+        assert_eq!(
+            report.trusted_time_pending,
+            case["trusted_time_pending"].as_bool().unwrap(),
+            "{file}"
+        );
+        assert_eq!(
+            codes(&report).contains(&"tsa_distrusted"),
+            case["tsa_distrusted_warning"].as_bool().unwrap(),
+            "{file}: {:?}",
+            codes(&report)
+        );
+        // Stamped before T: the identities count; at or after T: they wait for trusted time.
+        assert_eq!(report.valid, trusted, "{file}: {:?}", report.messages);
+        assert!(
+            report.integrity_ok,
+            "{file}: a distrusted stamp is no integrity failure"
+        );
+    }
+}
+
+// --- the rule ---------------------------------------------------------------------------------
+
+#[test]
+fn a_stamp_before_the_distrust_counts_and_one_at_or_after_it_does_not() {
+    let tsa = TestTsa::new();
+    let g = now_unix() + 60;
+    let pdf = stamped_at(&free_completed(), &tsa, g);
+    let base = trust_requiring_time(&tsa.cert_der());
+    assert!(verify(&pdf, &base).unwrap().valid);
+    for (name, store, trusted) in vector_trusts(&base, &tsa.cert_der(), g) {
+        let report = verify(&pdf, &store).unwrap();
+        assert_eq!(stamp_trusted(&report), trusted, "{name}");
+        assert_eq!(report.valid, trusted, "{name}");
+        let d = &report.document_timestamps[0].timestamp;
+        if trusted {
+            assert!(d.distrusted_after.is_empty(), "{name}");
+        } else {
+            assert!(report.trusted_time_pending, "{name}");
+            assert!(!d.distrusted_after.is_empty(), "{name}");
+            assert!(
+                d.detail.contains("distrusts the timestamp authority"),
+                "{}",
+                d.detail
+            );
+            let w = report
+                .findings
+                .iter()
+                .find(|f| f.code == "tsa_distrusted")
+                .unwrap();
+            assert!(w.text.contains("not used as trusted time"), "{}", w.text);
+            // The report says it in JSON too.
+            let json = serde_json::to_value(&report).unwrap();
+            assert_eq!(
+                json["document_timestamps"][0]["timestamp"]["distrusted_after"],
+                d.distrusted_after.as_str()
+            );
+        }
+    }
+}
+
+#[test]
+fn one_authority_is_distrusted_without_the_others_under_the_same_root() {
+    let ca = TestCa::new("SignPDF Test TSA Root");
+    let bad = ca.issue_tsa("SignPDF Test TSA 1");
+    let good = ca.issue_tsa("SignPDF Test TSA 2");
+    let g = now_unix() + 60;
+    let done = free_completed();
+    let by_bad = stamped_at(&done, &bad, g);
+    let by_good = stamped_at(&done, &good, g);
+    let mut store = trust_requiring_time(&ca.cert_der());
+    assert!(verify(&by_bad, &store).unwrap().valid);
+    store
+        .distrust_tsa(&cert_sha256_hex(&bad.cert_der()), &rfc3339(g - 3600), None)
+        .unwrap();
+    assert!(!verify(&by_bad, &store).unwrap().valid);
+    assert!(
+        verify(&by_good, &store).unwrap().valid,
+        "the other TSA under the root still counts"
+    );
+
+    // Distrusting the root distrusts every authority under it from that time.
+    let mut root = trust_requiring_time(&ca.cert_der());
+    root.distrust_tsa(
+        &cert_sha256_hex(&ca.cert_der()).to_uppercase(),
+        &rfc3339(g),
+        None,
+    )
+    .unwrap();
+    assert!(!verify(&by_good, &root).unwrap().valid);
+    assert!(!verify(&by_bad, &root).unwrap().valid);
+}
+
+#[test]
+fn entries_are_checked_merged_to_the_earlier_time_and_absent_when_empty() {
+    let tsa = TestTsa::new();
+    let hash = cert_sha256_hex(&tsa.cert_der());
+    let mut a = TrustStore::empty();
+    assert!(!a.to_json().unwrap().contains("tsa_distrusted"));
+    assert!(a.distrust_tsa("abc", "2027-01-01T00:00:00Z", None).is_err());
+    assert!(a.distrust_tsa(&hash, "soon", None).is_err());
+
+    a.distrust_tsa(&hash, "2027-06-01T00:00:00Z", None).unwrap();
+    // The same certificate again only moves earlier.
+    a.distrust_tsa(
+        &hash.to_uppercase(),
+        "2027-09-01T00:00:00Z",
+        Some("Test".into()),
+    )
+    .unwrap();
+    assert_eq!(a.tsa_distrusted.len(), 1);
+    assert_eq!(a.tsa_distrusted[0].distrusted_after, "2027-06-01T00:00:00Z");
+    let mut b = TrustStore::empty();
+    b.distrust_tsa(&hash, "2027-03-01T00:00:00Z", None).unwrap();
+    a.merge(&b);
+    assert_eq!(a.tsa_distrusted.len(), 1);
+    assert_eq!(a.tsa_distrusted[0].distrusted_after, "2027-03-01T00:00:00Z");
+    assert_eq!(a.tsa_distrusted[0].name.as_deref(), Some("Test"));
+
+    // A round trip keeps it; an unreadable entry is refused when a store is loaded.
+    let back = TrustStore::from_json(&a.to_json().unwrap()).unwrap();
+    assert_eq!(back, a);
+    let mut json: Value = serde_json::from_str(&a.to_json().unwrap()).unwrap();
+    json["tsa_distrusted"][0]["distrusted_after"] = "never".into();
+    let err = TrustStore::from_json(&json.to_string())
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("never"), "{err}");
+    json["tsa_distrusted"][0] =
+        json!({"cert_sha256": "00", "distrusted_after": "2027-01-01T00:00:00Z"});
+    assert!(TrustStore::from_json(&json.to_string()).is_err());
+}
+
+#[test]
+fn a_distrusted_stamp_asks_for_no_revocation_evidence() {
+    let ca = TestCa::new("SignPDF Test TSA Root");
+    let tsa = ca.issue_tsa("SignPDF Test TSA 1");
+    let g = now_unix() + 60;
+    let pdf = stamped_at(&free_completed(), &tsa, g);
+    let mut store = trust_requiring_time(&ca.cert_der());
+    assert!(!signpdf_core::revocation_targets(&pdf, &store)
+        .unwrap()
+        .is_empty());
+    store
+        .distrust_tsa(&cert_sha256_hex(&tsa.cert_der()), &rfc3339(g), None)
+        .unwrap();
+    assert!(signpdf_core::revocation_targets(&pdf, &store)
+        .unwrap()
+        .is_empty());
+}

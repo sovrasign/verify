@@ -1,0 +1,14 @@
+{
+  "attack": "A signer points the service link at a phishing page. The document stays valid (the link is not a prepared term), the change is a warning and the preparer's link is the one reported.",
+  "security_model_row": "A signer points the service link at a phishing page",
+  "regression_test": "service_link::a_signer_who_changes_the_link_leaves_the_document_valid_and_the_change_ignored",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "errors": [],
+  "warnings": [
+    "service_link_changed"
+  ]
+}

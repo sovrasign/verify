@@ -1,0 +1,65 @@
+{
+  "issuers": [
+    {
+      "issuer": "https://issuer.test",
+      "name": "SignPDF test issuer (corpus)",
+      "keys": [
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "8QLeBwQlHcrwlVGg8Yu2l57lAclMxrsybYQPFAu566E",
+          "y": "GdojxHc1YUWepASn7pNzsxSYyrWfhVE0jC-1zygLUHs"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "kXb5L1UKs7cKtvkKsJsH-eIQx6M8aNlTz-fOcN1DDKg",
+          "y": "oeUhifq0D_IlH-fiCqJCzlNBmWm_DX0idhBkeTvhbgA"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "RmWenxwq6GBgqS-vi-o4vPnU-GaP1twGIDK9fsfkw_Q",
+          "y": "NdWORjoJyLCv2UBG4mFAuf7ibgVKx0Iu2KJvhxXKCzE"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "82RemEHkLj8ECzF2teZve2kEj24yUQ7Vt1wljCwfBdM",
+          "y": "XoCR0tQVjl0D_pXoEhyvQrfbbJ9JkYFlDKBGJAtsFK4"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "rCMAIbqC7dNa8mtpCqgaNHPa75te3sVx3fpXT9sQz2s",
+          "y": "PHWbxcnOmWl0lsXbVyeHzlFrvyqbSfMZH-uKHptpOtQ"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "P7VQsYjiYJPMVWpJ61JZA6kXK0axYrl9QDkaVaKTNGU",
+          "y": "-hSUQKvuzL_pmZA811A1fr-h1fUU8DC6Nr4iT3GIn3U"
+        }
+      ],
+      "audiences": [
+        "signpdf-cli-dev"
+      ]
+    }
+  ],
+  "tsa_anchors": [
+    "MIIBujCCAWCgAwIBAgIBATAKBggqhkjOPQQDAjA0MRYwFAYDVQQKDA1TaWduUERGIFRlc3RzMRowGAYDVQQDDBFTaWduUERGIERlbW8gUm9vdDAeFw0yNjEwMjYwODE5MzlaFw0zNjEwMjMwODE5MzlaMDQxFjAUBgNVBAoMDVNpZ25QREYgVGVzdHMxGjAYBgNVBAMMEVNpZ25QREYgRGVtbyBSb290MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDfv6hWaw0CxKb34xe4thtcTv7RW211DMZVZX/tzLPTme7EiCTCbzJ8CH4x4WHEIj1V1Ij2VfOmWvHp456EPNkKNjMGEwHQYDVR0OBBYEFJw9HdnvmOHBuBfF1sULpIUb5HKyMB8GA1UdIwQYMBaAFJw9HdnvmOHBuBfF1sULpIUb5HKyMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIFbebEHxVeQ3QMh33Rt0sVHnFlUrvhYuVfRNYyrop2ycAiEAvDhxVIm2geYl1nJKQ+op3gSCC5+FgI6l0T09TPqyLNs="
+  ],
+  "allow_insecure_dev_issuer": false
+}

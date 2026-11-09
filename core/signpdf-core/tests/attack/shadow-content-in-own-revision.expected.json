@@ -1,0 +1,15 @@
+{
+  "attack": "A signer's own revision (covered by their valid signature) also redefines the page content: a shadow attack.",
+  "security_model_row": "Content change hidden in a signer's own revision (shadow attack)",
+  "regression_test": "security_e2e::content_change_inside_a_signers_own_revision_is_detected",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "forbidden_change",
+    "unsigned_insertion"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,37 @@
+# CodeQL static analysis of the Rust engine, the browser verifier's JavaScript and these
+# workflows (the SAST check of OpenSSF Scorecard; docs/RELEASES.md). Code scanning is free on
+# public repositories only: skipped while this one is private.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "11 5 * * 3"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: ${{ !github.event.repository.private && !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [rust, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}

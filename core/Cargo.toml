@@ -1,0 +1,59 @@
+[workspace]
+resolver = "2"
+members = ["signpdf-core", "signpdf-cli", "signpdf-ffi", "signpdf-auth", "signpdf-wasm"]
+exclude = ["fuzz"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sovrasign/verify"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+# float_roundtrip: parse every number to the exact f64 it was written from. Without it serde_json's
+# fast parser can be one unit in the last place off for 17-digit numbers (found by the property
+# test tests/properties.rs: a field rectangle at x = -91382.61748228747 read back as ...749), so a
+# signer's engine could rewrite a field's coordinates and the next revision's terms would differ.
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = { version = "0.11", features = ["oid"] }
+p256 = { version = "0.14", features = ["ecdsa", "pkcs8", "std"] }
+# The OS CSPRNG. `SysRng` is the rand_core 0.10 RNG that key generation takes.
+getrandom = { version = "0.4", features = ["sys_rng"] }
+rand_core = "0.10"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+hex = "0.4"
+base64 = "0.22"
+thiserror = "1"
+# PAdES signing stack (pure Rust, no OpenSSL/C toolchain), all of the der-0.8 generation so
+# they interoperate with p256 0.14 (ecdsa 0.17 / spki 0.8). p256 0.13 used crypto-bigint 0.5,
+# which has non-constant-time operations (RUSTSEC-2026-0387).
+# cms and rsa have no stable release of this generation yet: their release candidates are
+# pinned exactly, so an update cannot change them without an edit here. Move to the stable
+# releases when they come out.
+cms = { version = "=0.3.0-rc.0", features = ["builder", "std"] }
+x509-cert = { version = "0.3", features = ["builder", "std"] }
+der = { version = "0.8", features = ["std", "oid"] }
+spki = { version = "0.8", features = ["std"] }
+const-oid = { version = "0.10", features = ["db"] }
+signature = "3"
+# Default features (rayon, chrono, jiff, time) are unused and keep the WASM verifier from
+# building; parsing and incremental-update support need none of them.
+lopdf = { version = "0.42", default-features = false }
+rsa = "=0.10.0-rc.19"
+# SHA-1 only identifies certificates in OCSP requests and responses (the CertID hash of RFC 5019),
+# never for a signature. The version x509-cert already uses.
+sha1 = "0.11"
+# Compresses the embedded envelope (FlateDecode) and reads it back with a bound on its size. Pure
+# Rust, no unsafe code; already in the tree as lopdf's (through flate2) deflate implementation.
+miniz_oxide = "0.8"
+
+# The browser modules (scripts/build-verifier.sh, scripts/build-wasm-signer.sh): link-time
+# optimisation and one codegen unit make them about 10% smaller to download and no slower. Not
+# opt-level "s"/"z": they cut another 15-20% but make signing 1.6-3x slower (measured in
+# docs/spikes/p0-browser-signing.md). Native builds keep the release profile.
+[profile.wasm]
+inherits = "release"
+lto = true
+codegen-units = 1
+strip = true

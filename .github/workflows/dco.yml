@@ -1,0 +1,28 @@
+# Developer Certificate of Origin: every
+# commit of a pull request must carry a `Signed-off-by:` line naming its author
+# (`git commit -s`), by which the contributor certifies https://developercertificate.org
+# (CONTRIBUTING.md). Runs on pull requests that are ready for review, once the repository is
+# public.
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  signoff:
+    if: ${{ !github.event.repository.private && !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check-dco.py "$BASE" "$HEAD"

@@ -1,0 +1,11 @@
+Envelope schema v3 fixtures, made by scripts/make-schema-corpus.sh. Do not edit or regenerate.
+
+commit:    6a5e26b97b9c7baf752dcfdfea5f54a4a69bd423 (2026-10-26, browser signing: engine in a Web Worker per signature, SRI pages, wasm profile, B-T end to end)
+toolchain: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+made:      2026-10-26T21:27:04Z
+commands:  signpdf demo --out-dir DIR    (prepared.pdf, signed-by-alice.pdf, signed-final.pdf)
+           signpdf sign --input DIR/prepared.pdf --email alice@example.com --decline
+                        --reason "Corpus fixture: the first signer declines"   (declined.pdf)
+           signpdf verify --input FILE --json --insecure-dev-trust   (FILE.report.json)
+trust.json pins the test-issuer keys embedded in these files (no insecure dev opt-in needed)
+           and the demo's test TSA, when it used one (signature timestamps then verify as trusted).

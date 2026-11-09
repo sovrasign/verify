@@ -1,0 +1,81 @@
+{
+  "issuers": [
+    {
+      "issuer": "https://issuer.test",
+      "name": "SignPDF test issuer (corpus)",
+      "keys": [
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "_XoiimUeyvnj0cC8EEM8JHTz582c-q6STdrT2jFeGBg",
+          "y": "o8s9vPxPbXP_VHD_se9SXZLOMdzwlhASoBupZkCGKAw"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "-Wjgdmp3GAmyANGye6ySzasw3RDV6KLx39y8XRNA3wI",
+          "y": "DXnAZIxTHuC84C-Oz1ratRVXP6CztXReiU6N3pPJBTI"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "_c_guzatkAdfupFxS1fYpZeRkA4yJEEntFUuJq8Pq70",
+          "y": "R5B32uHw2TzE572-oJowYUq0rVXdw0RxK1WJPsZXIcY"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "NWBxycidsyH_LHLdgFWRkNpK6Y_A4VmvI0CyB7JQqhU",
+          "y": "60hGuoNPGhY3wYKP8UzYQ2fFWpqEYfErJVE4O47if7M"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "DMfcVw6e4bU8cl7qCA51aeL0SKsInWX3SZiE4wBULRc",
+          "y": "r5U7G9ZmAP2C5pBIXrhbezVohYKBBD6GMQe4SNCxyVs"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "UOrZEVC5DIJ2PLragiQ-pSVaQ94I2NLDMikVAtDuFxI",
+          "y": "KoZpZW02Uo39zOUZOBeChMGYNu-b0w9RGm3YRvuGzV0"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "8SMplA4MLJH6iryLOah-eA6TkrwiQ3SUqQ2j6t0bPbI",
+          "y": "IRiqZXr1oZTOpvZS4pwlMBi7vds2tsA_f9OEnwWf2KU"
+        },
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "I0qm6k2WQW495MxYZ6gEVBP7mAlupCu1ZLwXHICcslk",
+          "y": "bBVeIGmqYQ3HealEq8V5nynadtclylQ57MB2LMDhzWc"
+        }
+      ],
+      "audiences": [
+        "signpdf-cli-dev"
+      ]
+    }
+  ],
+  "tsa_anchors": [
+    "MIIBuTCCAWCgAwIBAgIBATAKBggqhkjOPQQDAjA0MRYwFAYDVQQKDA1TaWduUERGIFRlc3RzMRowGAYDVQQDDBFTaWduUERGIERlbW8gUm9vdDAeFw0yNjEwMjYxNTM4MDhaFw0zNjEwMjMxNTM4MDhaMDQxFjAUBgNVBAoMDVNpZ25QREYgVGVzdHMxGjAYBgNVBAMMEVNpZ25QREYgRGVtbyBSb290MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELcBZg8Rs+PibDTvmcG7sMvzV2djZA/L++HabbHi2q1RtW5PVYXSCuedGDT9RO7aKqFsbRO5B9be71Dx1eQj+ZaNjMGEwHQYDVR0OBBYEFNQ0CFffM979n0jzQ8V3TlDj2LruMB8GA1UdIwQYMBaAFNQ0CFffM979n0jzQ8V3TlDj2LruMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMCA0cAMEQCIDtUeK1nOUQxrZYapQrNqKc7vwg79g326+q23a25bwW7AiANyAsz1uccnLIK1JXHvwLypDOCGqG0GuS46mJaWJRs9Q=="
+  ],
+  "allow_insecure_dev_issuer": false
+}

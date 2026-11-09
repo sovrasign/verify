@@ -1,0 +1,14 @@
+{
+  "attack": "An unsigned incremental update after the last signature embeds a new envelope with another title (what a naive reader would show).",
+  "security_model_row": "Unsigned update after the last signature (V7, incremental saving)",
+  "regression_test": "security_e2e::unsigned_update_after_last_signature_is_detected",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "unsigned_changes"
+  ],
+  "warnings": []
+}

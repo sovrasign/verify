@@ -1,0 +1,11 @@
+# OSV-Scanner: known vulnerabilities in every committed lockfile (core/Cargo.lock and the others),
+# from osv.dev. Run with `--config osv-scanner.toml`. An entry here needs the reason it does not
+# apply; cargo deny (core/deny.toml) and cargo audit ignore the same advisories.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0071"
+reason = "rsa Marvin timing side channel: affects RSA private-key operations; the engine only verifies RSA signatures with public keys (private RSA keys exist only in the test-issuer feature)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0192"
+reason = "ttf-parser is unmaintained, no known vulnerability; to be replaced when lopdf moves to skrifa"

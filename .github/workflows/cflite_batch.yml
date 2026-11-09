@@ -1,0 +1,45 @@
+# Continuous fuzzing of the engine with ClusterFuzzLite. Every night it builds the cargo-fuzz
+# targets of core/fuzz with AddressSanitizer (.clusterfuzzlite/build.sh) and fuzzes them for 10
+# minutes in all, continuing from the corpus the earlier runs kept (stored as workflow artifacts).
+# A crash fails the run and is uploaded as an artifact with its reproducer; reproduce it with
+#   cd core/fuzz && cargo +nightly fuzz run <target> <crash file>
+# Cost: about 15 Linux minutes a night. When the engine is public, Actions minutes are free
+# and the run can grow to an hour.
+# While the repository is private the job is skipped: the ClusterFuzzLite action clones the repository
+# without a token, so it cannot build here (the nightly run failed on 2026-10-31). It switches itself
+# back on when the repository is public.
+name: ClusterFuzzLite batch
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  batch:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cflite-batch
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address]
+    steps:
+      - name: Build fuzzers (${{ matrix.sanitizer }})
+        id: build
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: rust
+          sanitizer: ${{ matrix.sanitizer }}
+      - name: Run fuzzers (${{ matrix.sanitizer }})
+        id: run
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 600
+          mode: batch
+          sanitizer: ${{ matrix.sanitizer }}

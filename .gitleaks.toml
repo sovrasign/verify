@@ -1,0 +1,18 @@
+# gitleaks: no secret in the repository or its history. Run by the repository's checks over the
+# commits of the branch and the uncommitted changes, and over the whole history on request.
+# Reports are always redacted: a finding never prints the secret.
+#
+# A finding is fixed (the value removed and, if it was ever real, rotated) or, if it is not a
+# secret, allowed here or in .gitleaksignore with the reason.
+title = "SignPDF gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public test vectors, not secrets"
+paths = [
+  # The compatibility corpus's expected reports quote the identity tokens of the built-in test
+  # issuer (the `test-issuer` feature: a key generated for the tests, trusted nowhere else).
+  '''^core/signpdf-core/tests/corpus/v\d+/[^/]+/[^/]+\.report\.json$''',
+]

@@ -1,0 +1,27 @@
+# Dependency updates (the Dependency-Update-Tool check of OpenSSF Scorecard; docs/RELEASES.md).
+# Version-update pull requests are off (limit 0) while the repository is private, because each one
+# would run CI on paid minutes; cargo audit and cargo vet already run in CI. Raise the limits to 5
+# once the repository is public.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /core
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      cargo:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pub
+    directory: /app
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0

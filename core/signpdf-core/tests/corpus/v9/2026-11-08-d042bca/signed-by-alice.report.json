@@ -1,0 +1,984 @@
+{
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "original_len": 63906,
+  "document_sha256": "455ff21f921ed5680ad60246050ce0f6f88042bc1a6662a2bcb47988a0b09008",
+  "complete": false,
+  "declined": false,
+  "audit_ok": true,
+  "order_ok": true,
+  "preparer": {
+    "index": 0,
+    "kind": "prepared",
+    "signer_id": "",
+    "actor_fingerprint": "1ed0397a447faf73dd7cccfd48b033ebb58c7d404a46c7acb11db44986f5fa47",
+    "signed_at": "2026-11-08T21:48:02.0821296Z",
+    "time_source": "device",
+    "token_issued_at": "2026-11-08T21:47:57Z",
+    "valid": true,
+    "detail": "preparer signature valid; identity verified as alice@example.com via https://issuer.test",
+    "idp_email": "alice@example.com",
+    "idp_issuer": "https://issuer.test",
+    "level": "L2",
+    "basis": [
+      {
+        "method": "account",
+        "issuer": "https://issuer.test"
+      }
+    ],
+    "identity_trust": "insecure-dev",
+    "signature_code": "1ed0397a"
+  },
+  "signatures": [
+    {
+      "index": 1,
+      "kind": "signed",
+      "signer_id": "s1",
+      "actor_fingerprint": "dc384de20a7a42bfea5fcd171cba9217e61f9804dc265b9a17f426537526de5e",
+      "signed_at": "2026-11-08T21:48:02.0874356Z",
+      "time_source": "device",
+      "token_issued_at": "2026-11-08T21:47:57Z",
+      "valid": true,
+      "detail": "PAdES signature valid; identity verified as alice@example.com via https://issuer.test",
+      "timestamp": {
+        "kind": "signature",
+        "time": "2026-11-08T21:48:02Z",
+        "verified": true,
+        "signature_valid": true,
+        "trusted": false,
+        "tsa_name": "SignPDF Demo TSA",
+        "serial": "2a",
+        "detail": "TSA certificate does not chain to a trusted timestamp anchor"
+      },
+      "idp_email": "alice@example.com",
+      "idp_issuer": "https://issuer.test",
+      "level": "L2",
+      "basis": [
+        {
+          "method": "account",
+          "issuer": "https://issuer.test"
+        }
+      ],
+      "identity_trust": "insecure-dev",
+      "signature_code": "dc384de2",
+      "utc_offset": "+09:00",
+      "local_signed_at": "2026-11-09T06:48:02.0874356+09:00",
+      "esign_consent": {
+        "version": "demo-1",
+        "lang": "en",
+        "sha256": "e353906e8ddc2b5f4fe66deb71d27527e5f3bc47012600411331c5ec0073d145",
+        "at": "2026-11-08T21:47:02Z"
+      },
+      "drawing": "typed"
+    }
+  ],
+  "messages": [],
+  "warnings": [
+    "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+  ],
+  "findings": [
+    {
+      "code": "insecure_dev_trust",
+      "severity": "warning",
+      "text": "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+    }
+  ],
+  "service_link": "https://sign.example.com/envelopes/demo-nda",
+  "pades_level": "B-B",
+  "algorithm_policy": {
+    "version": 1,
+    "source": "builtin"
+  },
+  "envelope": {
+    "schema_version": 9,
+    "envelope_id": "e9011aaf0cada7700be1288b27f9abb9",
+    "title": "Mutual NDA",
+    "created_by": "alice@example.com",
+    "created_at": "2026-11-08T21:48:02.0821296Z",
+    "created_by_pubkey": "BK5sKKXY0hlVm5+nm9/U437jalAaRoxx3/jE7X+4vHboCaf1WjSLFg3WyaXpYPKkuwB3Ij8gMW9rcygYBwO9Y0E=",
+    "created_by_id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5NDE3ODA4MiwiaWF0IjoxNzk0MTc0NDc3LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiJmYWRkNjk4ZGZiODY4MjJlNTg0NTc3ZjI5ZTc4MmQxYjk0NDdlNDRlMDYwMDAzNDhjNzVkYmIxM2I4N2FmMDY1Iiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.IfulFZNZPVgIPmqi0EexYK4LAhTGjE31E-uhdXkRdM5RDkVDlfuhoDwK8SuQh3uNZdDVF2DNlN6qChTPIPAlZQ",
+    "created_by_idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"5nd-um1c0WqGRpDkw8ZUOvJ-Hup2YUrYWrbf-QT1knY\",\"y\":\"9oP3UJ8RpSX3VD1KL5fHTVv532Xp6WJ-oSHavCvz_Cc\"}",
+    "created_by_issuer": "https://issuer.test",
+    "created_by_email": "alice@example.com",
+    "created_by_audience": "signpdf-cli-dev",
+    "source_digest": "1c10adb524c6c3d5a5a8e86b5fe61ef13aab69ee1d7924c2571659655dfd5085",
+    "source_len": 607,
+    "signers": [
+      {
+        "id": "s1",
+        "name": "Alice Example",
+        "handle": "alice@example.com",
+        "role": "Disclosing Party",
+        "order": 1,
+        "status": "signed",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "alice@example.com",
+          "min_level": "L1"
+        },
+        "public_key": "BMxF6dixblsU3uZM2hyjwI2CwNmHQ+ovvScaETkWydIbIi9oJjB2cxU2YL+Gw1QR2dB0u/xqSFEsM5P7xXkkhuc=",
+        "fingerprint": "dc384de20a7a42bfea5fcd171cba9217e61f9804dc265b9a17f426537526de5e"
+      },
+      {
+        "id": "s2",
+        "name": "Bob Builder",
+        "handle": "bob@example.com",
+        "role": "Receiving Party",
+        "order": 2,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "bob@example.com",
+          "required_domain": "example.com",
+          "min_level": "L3",
+          "required_methods": [
+            "organization"
+          ]
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "f1",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 120.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "d1",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 180.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true,
+        "value": "2026-11-09",
+        "date_format": "DD/MM/YYYY",
+        "signing_date": true
+      },
+      {
+        "id": "f2",
+        "field_type": "signature",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 260.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "t2",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 320.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "accept",
+        "field_type": "checkbox",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 380.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "I have read and accept this NDA"
+      },
+      {
+        "id": "copy-email",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 430.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By email",
+        "group": "Send my copy"
+      },
+      {
+        "id": "copy-post",
+        "field_type": "radio",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 408.0,
+          "w": 240.0,
+          "h": 16.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "By post",
+        "group": "Send my copy"
+      },
+      {
+        "id": "notes",
+        "field_type": "multiline",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 470.0,
+          "w": 240.0,
+          "h": 44.0
+        },
+        "assigned_signer": "s2",
+        "required": false,
+        "label": "Delivery notes"
+      },
+      {
+        "id": "format",
+        "field_type": "dropdown",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 530.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Copy format",
+        "options": [
+          "Paper",
+          "PDF"
+        ]
+      },
+      {
+        "id": "start",
+        "field_type": "date",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 590.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Start date",
+        "date_format": "MM/DD/YYYY"
+      },
+      {
+        "id": "fee",
+        "field_type": "number",
+        "page": 0,
+        "rect": {
+          "x": 72.0,
+          "y": 650.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Annual fee",
+        "number_format": {
+          "decimals": 2,
+          "min": "0",
+          "max": "1000000",
+          "style": "1 234,5",
+          "currency": "EUR"
+        }
+      },
+      {
+        "id": "notice-email",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 330.0,
+          "y": 320.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Notices to (email)",
+        "value_format": {
+          "kind": "email"
+        },
+        "length": {
+          "max": 80
+        }
+      },
+      {
+        "id": "ein",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 330.0,
+          "y": 380.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Employer ID (EIN)",
+        "value_format": {
+          "kind": "us_ein"
+        }
+      },
+      {
+        "id": "po",
+        "field_type": "text",
+        "page": 0,
+        "rect": {
+          "x": 330.0,
+          "y": 440.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Purchase order",
+        "value_format": {
+          "kind": "pattern",
+          "pattern": "PO-\\d{4}-\\d{3}"
+        },
+        "check_message": "Write the order number as PO-2026-123."
+      },
+      {
+        "id": "seats",
+        "field_type": "number",
+        "page": 0,
+        "rect": {
+          "x": 330.0,
+          "y": 500.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Seats",
+        "number_format": {
+          "decimals": 0,
+          "min": "1",
+          "max": "500"
+        }
+      },
+      {
+        "id": "total",
+        "field_type": "formula",
+        "page": 0,
+        "rect": {
+          "x": 330.0,
+          "y": 560.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Total",
+        "number_format": {
+          "decimals": 2,
+          "style": "1 234,5",
+          "currency": "EUR"
+        },
+        "formula": {
+          "expr": "{seats} * {fee} + {format} + {Send my copy}",
+          "map": {
+            "Send my copy": {
+              "By email": "0",
+              "By post": "10"
+            },
+            "format": {
+              "PDF": "0",
+              "Paper": "25"
+            }
+          }
+        }
+      }
+    ],
+    "policy": {
+      "signing_order": "sequential",
+      "allowed_signature_types": [
+        "PAdES"
+      ],
+      "signature_timestamps": "required"
+    },
+    "signatures": [
+      {
+        "kind": "signed",
+        "signer_id": "s1",
+        "fingerprint": "dc384de20a7a42bfea5fcd171cba9217e61f9804dc265b9a17f426537526de5e",
+        "public_key": "BMxF6dixblsU3uZM2hyjwI2CwNmHQ+ovvScaETkWydIbIi9oJjB2cxU2YL+Gw1QR2dB0u/xqSFEsM5P7xXkkhuc=",
+        "algorithm": "ECDSA_P256_SHA256",
+        "signed_at": "2026-11-08T21:48:02.0874356Z",
+        "doc_digest": "a2023a6f59ca27ed0959dce7851a74eca01f3dde6c23c64de5b8cf7763f61d6f",
+        "signed_prefix_len": 7044,
+        "signature": "MEQCIBWAXJOCyAhE2I3TRHHGTM2rO4PdHqqKzx82dlmp24TSAiAEZ8bH28XjSD5HR9iP1i3MxST58cfwJ+9rWz2Io/yzfg==",
+        "revision": 0,
+        "id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5NDE3ODA4MiwiaWF0IjoxNzk0MTc0NDc3LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiJiMDI3ZTgzM2UzNjQ4YzNjMTAzZDcxM2ZlMzYzZTZlMTc0MDYyNDk3OGQ3ZDg4MzA3YWIxMDBiNTc0NzdkMDUzIiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.orjPyfzPlsT-0rqeGnXgpN6Nxw-jOXWhMzFfWtXY3WX5GFpUfvNiP42sdoElGzakaMaBeaypcxp5TZQKW_woFw",
+        "idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"eA8KNHtOuAZdasXrwHOsVE8on6OH_DgomoaW73GTD4M\",\"y\":\"pwkQT6Lq-4SEjpyi1z_By5iZPsMVeLCZ5ffqL137m4A\"}",
+        "idp_issuer": "https://issuer.test",
+        "idp_subject": "dev|alice@example.com",
+        "idp_email": "alice@example.com",
+        "idp_audience": "signpdf-cli-dev",
+        "utc_offset": "+09:00",
+        "drawing": {
+          "kind": "typed",
+          "paths": [
+            [
+              [
+                0.0,
+                -30.0
+              ],
+              [
+                13.3,
+                -56.7,
+                25.0,
+                -70.0,
+                35.0,
+                -70.0
+              ],
+              [
+                45.0,
+                -70.0,
+                56.7,
+                -56.7,
+                70.0,
+                -30.0
+              ],
+              [
+                60.0,
+                -25.0
+              ],
+              [
+                46.7,
+                -45.0,
+                37.5,
+                -55.0,
+                32.5,
+                -55.0
+              ],
+              [
+                27.5,
+                -55.0,
+                20.0,
+                -45.0,
+                10.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                74.0,
+                0.0
+              ],
+              [
+                84.0,
+                -60.0
+              ],
+              [
+                94.0,
+                -60.0
+              ],
+              [
+                84.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                100.0,
+                -25.0
+              ],
+              [
+                100.0,
+                -41.7,
+                108.3,
+                -50.0,
+                125.0,
+                -50.0
+              ],
+              [
+                141.7,
+                -50.0,
+                150.0,
+                -41.7,
+                150.0,
+                -25.0
+              ],
+              [
+                150.0,
+                -8.3,
+                141.7,
+                0.0,
+                125.0,
+                0.0
+              ],
+              [
+                108.3,
+                0.0,
+                100.0,
+                -8.3,
+                100.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                110.0,
+                -25.0
+              ],
+              [
+                110.0,
+                -15.0,
+                115.0,
+                -10.0,
+                125.0,
+                -10.0
+              ],
+              [
+                135.0,
+                -10.0,
+                140.0,
+                -15.0,
+                140.0,
+                -25.0
+              ],
+              [
+                140.0,
+                -35.0,
+                135.0,
+                -40.0,
+                125.0,
+                -40.0
+              ],
+              [
+                115.0,
+                -40.0,
+                110.0,
+                -35.0,
+                110.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                159.0,
+                0.0
+              ],
+              [
+                169.0,
+                -60.0
+              ],
+              [
+                179.0,
+                -60.0
+              ],
+              [
+                169.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                185.0,
+                -25.0
+              ],
+              [
+                185.0,
+                -41.7,
+                193.3,
+                -50.0,
+                210.0,
+                -50.0
+              ],
+              [
+                226.7,
+                -50.0,
+                235.0,
+                -41.7,
+                235.0,
+                -25.0
+              ],
+              [
+                235.0,
+                -8.3,
+                226.7,
+                0.0,
+                210.0,
+                0.0
+              ],
+              [
+                193.3,
+                0.0,
+                185.0,
+                -8.3,
+                185.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                195.0,
+                -25.0
+              ],
+              [
+                195.0,
+                -15.0,
+                200.0,
+                -10.0,
+                210.0,
+                -10.0
+              ],
+              [
+                220.0,
+                -10.0,
+                225.0,
+                -15.0,
+                225.0,
+                -25.0
+              ],
+              [
+                225.0,
+                -35.0,
+                220.0,
+                -40.0,
+                210.0,
+                -40.0
+              ],
+              [
+                200.0,
+                -40.0,
+                195.0,
+                -35.0,
+                195.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                265.0,
+                -30.0
+              ],
+              [
+                278.3,
+                -56.7,
+                290.0,
+                -70.0,
+                300.0,
+                -70.0
+              ],
+              [
+                310.0,
+                -70.0,
+                321.7,
+                -56.7,
+                335.0,
+                -30.0
+              ],
+              [
+                325.0,
+                -25.0
+              ],
+              [
+                311.7,
+                -45.0,
+                302.5,
+                -55.0,
+                297.5,
+                -55.0
+              ],
+              [
+                292.5,
+                -55.0,
+                285.0,
+                -45.0,
+                275.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                339.0,
+                0.0
+              ],
+              [
+                349.0,
+                -60.0
+              ],
+              [
+                359.0,
+                -60.0
+              ],
+              [
+                349.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                365.0,
+                -25.0
+              ],
+              [
+                365.0,
+                -41.7,
+                373.3,
+                -50.0,
+                390.0,
+                -50.0
+              ],
+              [
+                406.7,
+                -50.0,
+                415.0,
+                -41.7,
+                415.0,
+                -25.0
+              ],
+              [
+                415.0,
+                -8.3,
+                406.7,
+                0.0,
+                390.0,
+                0.0
+              ],
+              [
+                373.3,
+                0.0,
+                365.0,
+                -8.3,
+                365.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                375.0,
+                -25.0
+              ],
+              [
+                375.0,
+                -15.0,
+                380.0,
+                -10.0,
+                390.0,
+                -10.0
+              ],
+              [
+                400.0,
+                -10.0,
+                405.0,
+                -15.0,
+                405.0,
+                -25.0
+              ],
+              [
+                405.0,
+                -35.0,
+                400.0,
+                -40.0,
+                390.0,
+                -40.0
+              ],
+              [
+                380.0,
+                -40.0,
+                375.0,
+                -35.0,
+                375.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                424.0,
+                0.0
+              ],
+              [
+                434.0,
+                -60.0
+              ],
+              [
+                444.0,
+                -60.0
+              ],
+              [
+                434.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                454.0,
+                0.0
+              ],
+              [
+                464.0,
+                -60.0
+              ],
+              [
+                474.0,
+                -60.0
+              ],
+              [
+                464.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                484.0,
+                0.0
+              ],
+              [
+                494.0,
+                -60.0
+              ],
+              [
+                504.0,
+                -60.0
+              ],
+              [
+                494.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                510.0,
+                -25.0
+              ],
+              [
+                510.0,
+                -41.7,
+                518.3,
+                -50.0,
+                535.0,
+                -50.0
+              ],
+              [
+                551.7,
+                -50.0,
+                560.0,
+                -41.7,
+                560.0,
+                -25.0
+              ],
+              [
+                560.0,
+                -8.3,
+                551.7,
+                0.0,
+                535.0,
+                0.0
+              ],
+              [
+                518.3,
+                0.0,
+                510.0,
+                -8.3,
+                510.0,
+                -25.0
+              ]
+            ],
+            [
+              [
+                520.0,
+                -25.0
+              ],
+              [
+                520.0,
+                -15.0,
+                525.0,
+                -10.0,
+                535.0,
+                -10.0
+              ],
+              [
+                545.0,
+                -10.0,
+                550.0,
+                -15.0,
+                550.0,
+                -25.0
+              ],
+              [
+                550.0,
+                -35.0,
+                545.0,
+                -40.0,
+                535.0,
+                -40.0
+              ],
+              [
+                525.0,
+                -40.0,
+                520.0,
+                -35.0,
+                520.0,
+                -25.0
+              ]
+            ]
+          ]
+        }
+      }
+    ],
+    "audit_log": [
+      {
+        "seq": 0,
+        "action": "prepared",
+        "actor_fingerprint": "1ed0397a447faf73dd7cccfd48b033ebb58c7d404a46c7acb11db44986f5fa47",
+        "actor_name": "alice@example.com",
+        "at": "2026-11-08T21:48:02.0821296Z",
+        "details": "prepared 'Mutual NDA' for 2 signer(s); preparer verified as alice@example.com via https://issuer.test",
+        "prev_hash": "GENESIS",
+        "entry_hash": "ba16421fa790c59b7ffa473c818e2bd81ba1fda6bf96aa6bd5753a0d2d9eb9d0",
+        "signature": "MEUCIQC+s1KRGnm2zwjRAhmLaXFfwa/6C4sfIsF3Hkebi/KNLQIgfsmrQJcPQ7Scl9JHFjIiyIBmUTKX7x125qpnkjfaTDc="
+      },
+      {
+        "seq": 1,
+        "action": "signed",
+        "actor_fingerprint": "dc384de20a7a42bfea5fcd171cba9217e61f9804dc265b9a17f426537526de5e",
+        "actor_name": "alice@example.com",
+        "at": "2026-11-08T21:48:02.0874356Z",
+        "details": "alice@example.com signed (revision 0); verified as alice@example.com via https://issuer.test",
+        "prev_hash": "ba16421fa790c59b7ffa473c818e2bd81ba1fda6bf96aa6bd5753a0d2d9eb9d0",
+        "entry_hash": "0af6f01caf3951f9cc4368677f8d32e3320133283fa0707d9d8f38de7758671c",
+        "signature": "MEUCIAz1ZAkdxYFJUL76QWBg0e7XJgFzYw845l/zeqdqeSgpAiEAkimgoMpv+gRJgitmjsYSBdewMryRl/Vox5qZjA34hGA=",
+        "esign_consent": {
+          "version": "demo-1",
+          "lang": "en",
+          "sha256": "e353906e8ddc2b5f4fe66deb71d27527e5f3bc47012600411331c5ec0073d145",
+          "at": "2026-11-08T21:47:02Z"
+        }
+      }
+    ],
+    "service_link": "https://sign.example.com/envelopes/demo-nda",
+    "verify_at": "verify.example.com",
+    "initials_rule": "name-v1"
+  }
+}

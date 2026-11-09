@@ -1,0 +1,16 @@
+{
+  "attack": "A signer switches the envelope's signature-timestamp policy from required to none.",
+  "security_model_row": "A signer changes the signature-timestamp policy",
+  "regression_test": "timestamp_policy::a_signer_cannot_change_the_policy",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "terms_changed"
+  ],
+  "warnings": [
+    "timestamp_missing"
+  ]
+}

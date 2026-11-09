@@ -1,0 +1,23 @@
+{
+  "issuers": [
+    {
+      "issuer": "https://issuer.test",
+      "name": "",
+      "keys": [
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "9xQxCW5NL-OcwH4XwfgSKvvvW_iOO5W2KvZdtFuzcaw",
+          "y": "NG0chRVg7Urh-FLoQYfEc8yPLd6d5TdgystjKccYbpk"
+        }
+      ],
+      "audiences": [
+        "signpdf-test"
+      ]
+    }
+  ],
+  "tsa_anchors": [],
+  "allow_insecure_dev_issuer": false
+}

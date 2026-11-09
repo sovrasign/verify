@@ -1,0 +1,119 @@
+# The browser verifier's mirror on GitHub Pages, and the archive of every verifier build
+# (docs/RELEASES.md).
+#
+# On every push to main that changes the verifier, the engine or the test vectors:
+# - `build` builds the WebAssembly module reproducibly (scripts/build-wasm-reproducible.sh: the
+#   same bytes on any machine) and assembles the site
+#   (scripts/build-pages-site.sh): the page, SHA256SUMS of every file, BUILD.md with the rebuild
+#   steps, and the specification and CC0 test vectors as a tarball;
+# - `deploy` publishes it on GitHub Pages, hosting independent of our Azure deployment, so the
+#   verifier stays reachable if verify.<domain> is not;
+# - `archive` keeps that build for good: a GitHub release `verifier-<date>-<commit>` holding the
+#   site and its hashes, and a Software Heritage "save code now" request for the repository.
+#
+# Everything is skipped while the repository is private: nothing is made public before the
+# repository is. Then turn on Pages with "GitHub Actions" as the
+# source (Settings > Pages) and the job runs on the next push.
+name: Verifier mirror
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "core/**"
+      - "web/verifier/**"
+      - "spec/**"
+      - "scripts/build-pages-site.sh"
+      - "scripts/build-wasm-reproducible.sh"
+      - "scripts/sri.mjs"
+      - "scripts/wasm-*"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: scripts/build-pages-site.sh
+        run: bash scripts/build-pages-site.sh site
+      - name: Hashes
+        run: |
+          { echo "### Verifier mirror"; echo '```'; cat site/SHA256SUMS; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  archive:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: github-pages
+      - name: Name the build
+        id: name
+        run: |
+          echo "tag=verifier-$(date -u +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          mkdir site && tar -xf artifact.tar -C site
+          tar -C site --owner=0 --group=0 --numeric-owner -czf verifier-site.tar.gz .
+          cp site/SHA256SUMS site/BUILD.md .
+          sha256sum verifier-site.tar.gz >> SHA256SUMS
+      # SLSA build provenance for every file of the site (Sigstore, signed with this workflow's
+      # identity): `gh attestation verify <file> --repo <owner>/signpdf` checks a copy. The bundle
+      # also goes into the release, which is what Scorecard's Signed-Releases check looks for.
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: SHA256SUMS
+      - name: Keep the provenance bundle
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" verifier-site.sigstore.json
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ steps.name.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Verifier build ${{ steps.name.outputs.tag }}
+          body_path: BUILD.md
+          files: |
+            verifier-site.tar.gz
+            SHA256SUMS
+            verifier-site.sigstore.json
+      - name: Ask Software Heritage to archive the repository
+        # Best effort: the archive is a second copy, and the service rate-limits anonymous requests.
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST \
+            "https://archive.softwareheritage.org/api/1/origin/save/git/url/${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/" \
+            | head -c 600

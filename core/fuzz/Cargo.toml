@@ -1,0 +1,82 @@
+[package]
+name = "signpdf-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Excluded from the main workspace (core/Cargo.toml `exclude`); needs nightly + cargo-fuzz:
+#   cargo install cargo-fuzz
+#   cd core/fuzz && cargo +nightly fuzz run verify -- -max_total_time=300
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# test-issuer: the prepare and sign targets mint ID tokens with the untrusted test issuer.
+signpdf-core = { path = "../signpdf-core", features = ["test-issuer"] }
+serde_json = "1"
+
+[workspace]
+
+[[bin]]
+name = "verify"
+path = "fuzz_targets/verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pades_verify"
+path = "fuzz_targets/pades_verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "timestamp"
+path = "fuzz_targets/timestamp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "id_token"
+path = "fuzz_targets/id_token.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "envelope_json"
+path = "fuzz_targets/envelope_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "prepare"
+path = "fuzz_targets/prepare.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sign"
+path = "fuzz_targets/sign.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "documents"
+path = "fuzz_targets/documents.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xref"
+path = "fuzz_targets/xref.rs"
+test = false
+doc = false
+bench = false

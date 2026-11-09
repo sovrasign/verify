@@ -1,0 +1,14 @@
+{
+  "attack": "One hex digit of the last signature's CMS (inside its /Contents) is changed.",
+  "security_model_row": "CMS malleability",
+  "regression_test": "pades_e2e::signatures_are_canonical_pades_baseline",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "signature_altered"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,82 @@
+# The history of the signed trust list (spec/envelope-format.md §9.2; docs/RELEASES.md).
+#
+# Every 6 hours, fetch the trust list the service publishes (`trust.json` and its detached JWS),
+# check the signature against the pinned trust-list keys (tools/archive/trust-list-keys.json) and,
+# when its sequence is new, commit it to the `trust-history` branch under
+# `trust-lists/<sequence>.json` and `.jws`, with an index. A list that does not verify, or that
+# changes a sequence already archived, fails the run and is not archived: that is an alert.
+# Then ask Software Heritage to archive the repository, branch included.
+#
+# Off until the repository is public and production publishes a signed list:
+# it needs the repository variable TRUST_LIST_URL (for example
+# https://trust.<domain>/v1/trust/trust.json; the JWS is at the same URL with `.jws`) and at least
+# one pinned key.
+name: Trust-list archive
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trust-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    if: ${{ !github.event.repository.private && vars.TRUST_LIST_URL != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          path: main
+      - name: Fetch the published list
+        env:
+          URL: ${{ vars.TRUST_LIST_URL }}
+        run: |
+          curl -fsS --proto =https -o trust.json "$URL"
+          curl -fsS --proto =https -o trust.json.jws "$URL.jws"
+          python3 main/tools/archive/trust_archive.py verify \
+            --keys main/tools/archive/trust-list-keys.json --payload trust.json --jws trust.json.jws
+      - name: Check out the history branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init -q history && cd history
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin trust-history; then
+            git checkout -q -b trust-history FETCH_HEAD
+          else
+            git checkout -q --orphan trust-history
+          fi
+      - name: Archive a new list
+        id: archive
+        run: |
+          result=$(python3 main/tools/archive/trust_archive.py archive \
+            --keys main/tools/archive/trust-list-keys.json --payload trust.json --jws trust.json.jws \
+            --dir history/trust-lists)
+          echo "$result"
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+      - name: Commit and push
+        if: steps.archive.outputs.result == 'archived'
+        run: |
+          cd history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add trust-lists
+          seq=$(tail -n 1 trust-lists/index.tsv | cut -f1)
+          git commit -q -m "Trust list $seq"
+          git push -q origin trust-history
+      - name: Ask Software Heritage to archive the repository
+        if: steps.archive.outputs.result == 'archived'
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST \
+            "https://archive.softwareheritage.org/api/1/origin/save/git/url/${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/" \
+            | head -c 600

@@ -1,0 +1,16 @@
+{
+  "attack": "A signer's revision removes the identity policy of the next signer's slot.",
+  "security_model_row": "Malicious signer changing terms, other slots, others' fields, history",
+  "regression_test": "security_e2e::malicious_signer_cannot_loosen_a_later_slot",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "terms_changed"
+  ],
+  "warnings": [
+    "slot_policy_weak"
+  ]
+}

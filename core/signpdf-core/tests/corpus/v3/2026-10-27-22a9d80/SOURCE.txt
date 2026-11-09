@@ -1,0 +1,15 @@
+Envelope schema v3 fixtures, made by scripts/make-schema-corpus.sh. Do not edit or regenerate.
+
+commit:    22a9d8048fcbf02ce269876d7509228aefb992fd (2026-10-27, engine: document timestamps and validation data after a signature (PAdES B-LT/B-LTA))
+toolchain: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+made:      2026-10-27T08:19:40Z
+commands:  signpdf demo --out-dir DIR    (prepared.pdf, signed-by-alice.pdf, signed-final.pdf,
+                                         and any of prepared-no-timestamps.pdf,
+                                         signed-no-timestamps.pdf, signed-ltv.pdf,
+                                         sealed-no-timestamps.pdf the demo wrote)
+           signpdf sign --input DIR/prepared.pdf --email alice@example.com --decline
+                        --reason "Corpus fixture: the first signer declines"   (declined.pdf)
+           signpdf verify --input FILE --json --insecure-dev-trust   (FILE.report.json)
+trust.json pins the test-issuer keys embedded in these files (no insecure dev opt-in needed)
+           and the demo's test TSA or its root, when it used one (timestamps then verify as
+           trusted).

@@ -1,0 +1,36 @@
+[package]
+name = "signpdf-wasm"
+description = "SignPDF engine compiled to WebAssembly for the browser: the offline verifier, and (feature `signing`) a signer that keeps its ephemeral key in WASM memory. No server, no wasm-bindgen."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Off by default: the default build is the verify-only module of `web/verifier/`, which imports
+# nothing from the page and never needs randomness or a clock. `signing` adds prepare/sign, the
+# ephemeral-key exports and typed signatures (the font parser of `signpdf-core/typed`), and
+# imports two functions from the host (`signpdf_host` module: `random_fill`, backed by
+# `crypto.getRandomValues`, and `now_ms`, backed by `Date.now`). See src/signing.rs and
+# scripts/build-wasm-signer.sh.
+default = []
+signing = ["dep:serde", "signpdf-core/typed"]
+
+[dependencies]
+signpdf-core = { path = "../signpdf-core" }
+serde_json.workspace = true
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Native unit tests of the signing exports mint ID tokens with the bundled test issuer.
+signpdf-core = { path = "../signpdf-core", features = ["test-issuer"] }
+
+# wasm32-unknown-unknown has no OS entropy source. A "custom" backend is registered for
+# getrandom 0.4, the only generation in the dependency graph since the p256 0.14 upgrade: it fails
+# in the verify-only build, and reads the host's `crypto.getRandomValues` with `signing`.
+# See src/lib.rs and core/.cargo/config.toml.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom04 = { package = "getrandom", version = "0.4" }

@@ -1,0 +1,61 @@
+[package]
+name = "signpdf-core"
+description = "Serverless document signing engine: envelope model, workflow, and PAdES-oriented crypto."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Off by default so production builds (the FFI library the app ships, the WASM verifier) never
+# contain the untrusted test identity provider, test TSA, or malicious-signer test hooks. Tests
+# enable it through the self dev-dependency below; the reference CLI enables it for its explicit
+# `--email` dev login.
+default = []
+# Compiles `oidc::testing` (a local, untrusted ID-token minter), `timestamp::testing` (synthetic
+# and test-TSA tokens), and `workflow::testing` (adversarial signing hooks).
+test-issuer = []
+# Typed signatures: `ink::typed::typed_signature` turns a name into the glyph outlines of a font
+# the host supplies (a font parser, ttf-parser). The browser signer, the FFI library and the CLI
+# enable it; the verifier does not need it (it only checks the paths a signature draws).
+typed = ["dep:ttf-parser"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+p256.workspace = true
+rand_core.workspace = true
+getrandom.workspace = true
+time.workspace = true
+hex.workspace = true
+base64.workspace = true
+thiserror.workspace = true
+cms.workspace = true
+x509-cert.workspace = true
+der.workspace = true
+spki.workspace = true
+const-oid.workspace = true
+signature.workspace = true
+lopdf.workspace = true
+rsa.workspace = true
+sha1.workspace = true
+miniz_oxide.workspace = true
+# Pure Rust, no unsafe code, no allocation while parsing; only what typed signatures use: glyph
+# outlines, metrics and pair kerning (`opentype-layout` for the GPOS `kern` feature). Already in
+# the tree through lopdf. RustSec marks it unmaintained (RUSTSEC-2026-0192, informational, no
+# vulnerability): it parses only the host's own bundled font files, never document content, and
+# the verifier does not link it. Move to `skrifa` if a fix is ever needed.
+ttf-parser = { version = "0.25", default-features = false, features = ["std", "opentype-layout"], optional = true }
+
+[dev-dependencies]
+# Integration tests compile as a separate crate; they re-parse signed output to
+# assert structural invariants (e.g. pre-existing AcroForm fields survive signing).
+lopdf.workspace = true
+time = { workspace = true, features = ["parsing"] }
+hex.workspace = true
+# Property tests (tests/properties.rs): envelope serialization, the routing state machine and
+# revision replay. Test-only; never linked into a build that ships.
+proptest = { version = "1", default-features = false, features = ["std"] }
+# Enable the test-only modules for this crate's own integration tests.
+signpdf-core = { path = ".", features = ["test-issuer", "typed"] }

@@ -1,0 +1,15 @@
+{
+  "attack": "Bob's revision rewrites the details of Alice's audit entry.",
+  "security_model_row": "Malicious signer changing terms, other slots, others' fields, history",
+  "regression_test": "security_e2e::malicious_signer_cannot_rewrite_history",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "audit_log_broken",
+    "audit_log_rewritten"
+  ],
+  "warnings": []
+}

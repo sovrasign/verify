@@ -1,0 +1,16 @@
+{
+  "attack": "Alice signs and edits her record to claim Bob's slot, which asks for Bob.",
+  "security_model_row": "Malicious signer changing terms, other slots, others' fields, history",
+  "regression_test": "security_e2e::malicious_signer_cannot_claim_a_slot_their_identity_does_not_fit",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "identity_failed",
+    "signature_record_inconsistent",
+    "slot_tampered"
+  ],
+  "warnings": []
+}

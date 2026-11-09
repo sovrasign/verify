@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Template: scripts/build-verifier.sh writes index.html from it (scripts/sri.mjs), adding the
+     Subresource Integrity hashes of the script, the stylesheet and the WebAssembly module. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'">
+  <title data-i18n="title">SignPDF Verifier</title>
+  <link rel="stylesheet" href="verifier.css">
+</head>
+<body>
+  <header>
+    <div class="lang">
+      <label for="lang" data-i18n="language">Language</label>
+      <select id="lang"></select>
+    </div>
+    <h1 data-i18n="title">SignPDF Verifier</h1>
+    <p class="lede"><span data-i18n="lede">Check a signed PDF's signatures, signing history and signer identities.
+      Everything runs in your browser —</span> <strong data-i18n="lede_strong">the document is never uploaded</strong>.</p>
+    <p class="muted" id="draft-note" data-i18n="draft_note" hidden></p>
+  </header>
+
+  <main>
+    <section class="card" aria-labelledby="doc-h">
+      <h2 id="doc-h" data-i18n="doc_h">1. Choose a signed PDF</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="pdf" accept="application/pdf,.pdf">
+        <span id="drop-text" data-i18n="drop">Drop a PDF here or click to choose</span>
+      </label>
+    </section>
+
+    <section class="card" aria-labelledby="trust-h">
+      <h2 id="trust-h" data-i18n="trust_h">2. Trusted identity providers</h2>
+      <p class="muted" data-i18n="trust_intro">A signer's identity is only verified if the provider key that vouched for
+        them is one this verifier trusts. Keys you fetch are remembered in this browser, so
+        documents signed before a provider rotates its keys keep verifying.</p>
+      <ul id="issuers" class="issuers"></ul>
+      <div class="row">
+        <button id="fetch-keys" type="button" data-i18n="fetch_keys">Fetch current provider keys</button>
+        <label class="button secondary"><span data-i18n="load_trust">Load trust.json</span><input type="file" id="trust-file" accept="application/json,.json" hidden></label>
+        <button id="export-trust" type="button" class="secondary" data-i18n="export_trust">Export trust.json</button>
+      </div>
+      <p id="trust-status" class="muted" role="status"></p>
+    </section>
+
+    <section class="card" id="result" aria-live="polite" hidden>
+      <div id="verdict" class="verdict"></div>
+      <div id="summary"></div>
+      <div class="row">
+        <button id="certificate" type="button" data-i18n="certificate">Download certificate of completion</button>
+      </div>
+      <h3 data-i18n="revisions_h">Revisions</h3>
+      <ol id="revisions" class="revisions"></ol>
+      <div id="timestamps"></div>
+      <div id="problems"></div>
+      <details>
+        <summary data-i18n="audit_h">Audit trail</summary>
+        <ol id="audit" class="audit"></ol>
+      </details>
+      <details>
+        <summary data-i18n="raw_h">Raw report (JSON)</summary>
+        <pre id="raw"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer class="muted" data-i18n="footer">
+    Powered by the SignPDF Rust core compiled to WebAssembly. Verification is offline; the only
+    network requests are the optional provider-key fetches you trigger above.
+  </footer>
+  <script src="verifier-i18n.js"></script>
+  <script src="verifier.js"></script>
+</body>
+</html>

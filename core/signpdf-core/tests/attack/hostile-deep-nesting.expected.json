@@ -1,0 +1,13 @@
+{
+  "attack": "A PDF of 200,000 nested arrays, which overflowed the stack of an older parser.",
+  "security_model_row": "Crash on hostile input",
+  "regression_test": "security_e2e::deeply_nested_objects_do_not_overflow_the_stack",
+  "schema_version": 0,
+  "outcome": "error",
+  "error_code": "workflow",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": false,
+  "errors": [],
+  "warnings": []
+}

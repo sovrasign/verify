@@ -1,0 +1,5 @@
+# ClusterFuzzLite (https://google.github.io/clusterfuzzlite/): continuous fuzzing of the engine in
+# GitHub Actions. The targets are core/fuzz (cargo-fuzz); build.sh builds them and their seed
+# corpora. Workflows: .github/workflows/cflite_batch.yml (nightly) and cflite_pr.yml (pull
+# requests that touch the engine).
+language: rust

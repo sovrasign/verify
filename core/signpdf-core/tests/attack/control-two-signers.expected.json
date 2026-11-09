@@ -1,0 +1,12 @@
+{
+  "attack": "None: an honest envelope signed by Alice then Bob. It shows that trust.json is enough to verify the documents below, so every failure is the attack's.",
+  "security_model_row": "-",
+  "regression_test": "workflow_e2e",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "errors": [],
+  "warnings": []
+}

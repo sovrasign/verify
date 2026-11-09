@@ -1,0 +1,14 @@
+{
+  "attack": "An unsigned incremental update after the last signature redefines the page's content stream.",
+  "security_model_row": "Unsigned update after the last signature (V7, incremental saving)",
+  "regression_test": "security_e2e::page_content_replaced_after_signing_is_detected",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "unsigned_changes"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,14 @@
+{
+  "attack": "A signer's own signed revision changes the title (a prepared term).",
+  "security_model_row": "Malicious signer changing terms, other slots, others' fields, history",
+  "regression_test": "security_e2e::malicious_signer_cannot_change_the_prepared_terms",
+  "schema_version": 7,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "terms_changed"
+  ],
+  "warnings": []
+}

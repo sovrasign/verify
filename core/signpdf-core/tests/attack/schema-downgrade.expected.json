@@ -1,0 +1,14 @@
+{
+  "attack": "A signer's revision writes the envelope back as an older schema version.",
+  "security_model_row": "Revision chain moved to an older version (downgrade)",
+  "regression_test": "schema_versions::a_revision_cannot_move_a_document_to_an_older_version",
+  "schema_version": 6,
+  "outcome": "report",
+  "valid": false,
+  "integrity_ok": false,
+  "identities_trusted": true,
+  "errors": [
+    "terms_changed"
+  ],
+  "warnings": []
+}

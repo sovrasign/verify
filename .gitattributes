@@ -1,0 +1,9 @@
+# Shell scripts must keep LF endings to run under sh/bash, including on Windows checkouts.
+*.sh text eol=lf
+# PDFs and other binary fixtures must never have line endings converted: a signed PDF's bytes
+# are covered by its signatures (core.autocrlf would otherwise touch ASCII-only files).
+*.pdf binary
+*.der binary
+# cargo vet compares its store files byte for byte with what it would write, with LF endings:
+# with core.autocrlf=true (the Windows default) `cargo vet --locked` would fail on every line.
+core/supply-chain/** text eol=lf

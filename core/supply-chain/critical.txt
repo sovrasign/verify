@@ -1,0 +1,55 @@
+# Crates on the signing and verification path (RustCrypto, X.509, CMS, PDF parsing, JOSE).
+# cargo vet must vouch for each of them; an exemption for one of them is the frozen baseline
+# only (critical-baseline.txt), and every new version needs an audit or an imported one before
+# it is adopted. scripts/vet-critical.py checks this and prints the audit backlog. See
+# docs/SUPPLY_CHAIN.md.
+#
+# Elliptic curves, hashes, signatures
+p256
+ecdsa
+elliptic-curve
+primeorder
+primefield
+ff
+group
+crypto-bigint
+rfc6979
+hmac
+sha2
+sha1
+digest
+signature
+crypto-common
+block-buffer
+hybrid-array
+subtle
+zeroize
+cpufeatures
+# RSA (verification of identity-provider tokens and TSA certificates)
+rsa
+crypto-primes
+pkcs1
+# Encodings, keys, certificates, CMS
+der
+der_derive
+const-oid
+spki
+pkcs8
+sec1
+x509-cert
+cms
+base16ct
+base64ct
+base64
+pem-rfc7468
+# Randomness (ephemeral keys)
+getrandom
+rand_core
+# PDF parsing and its stream filters
+lopdf
+flate2
+miniz_oxide
+weezl
+nom
+# Envelope and token JSON
+serde_json

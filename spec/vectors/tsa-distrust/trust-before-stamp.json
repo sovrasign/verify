@@ -1,0 +1,33 @@
+{
+  "issuers": [
+    {
+      "issuer": "https://issuer.test",
+      "name": "",
+      "keys": [
+        {
+          "kty": "EC",
+          "kid": "es-test-1",
+          "alg": "ES256",
+          "crv": "P-256",
+          "x": "b1f9JgUyyklwW7ZQCdJpJQ4mspSqz6SZH2wXxsHZDsk",
+          "y": "5HvTsCVyFHLsHgWKTEIl57oILFnPoXol4APk0j2G4Xs"
+        }
+      ],
+      "audiences": [
+        "signpdf-test"
+      ],
+      "requires_trusted_time": true
+    }
+  ],
+  "tsa_anchors": [
+    "MIIBzDCCAXOgAwIBAgIBBzAKBggqhkjOPQQDAjAzMRYwFAYDVQQKDA1TaWduUERGIFRlc3RzMRkwFwYDVQQDDBBTaWduUERGIFRlc3QgVFNBMB4XDTI2MTEwODAxNTIxNloXDTM2MTEwNTAxNTIxNlowMzEWMBQGA1UECgwNU2lnblBERiBUZXN0czEZMBcGA1UEAwwQU2lnblBERiBUZXN0IFRTQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJAtf+dV0ju7lLSfOEIuSEKlzYaFl5oqQWoXS1d1BucfwGW3TOvgkrKC+6tJOwj9gmoSN1Q/vd0Vx6EEkSRwheWjeDB2MBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMB0GA1UdDgQWBBTbF9wfXoA4YDSLDfwieNZAHWT2IDAfBgNVHSMEGDAWgBTbF9wfXoA4YDSLDfwieNZAHWT2IDAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIGwDAKBggqhkjOPQQDAgNHADBEAiAddtzRHEz9HEc8vE1Ziyjmy5QtIbF4SIZuiAJ9Fvfl3QIgaKgsIvKxmQwwHnN/98i4jcOd2X5zcWW5Lqn73khYhYU="
+  ],
+  "allow_insecure_dev_issuer": false,
+  "tsa_distrusted": [
+    {
+      "cert_sha256": "818ec72273c2b4bc786753e224913f026092e6616448b756ff35d5e1ee32c1f6",
+      "distrusted_after": "2026-11-08T01:54:15Z",
+      "name": "SignPDF Test TSA"
+    }
+  ]
+}

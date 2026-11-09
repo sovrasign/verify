@@ -1,0 +1,637 @@
+
+# cargo-vet config file
+
+[cargo-vet]
+version = "0.10"
+
+[imports.ariel-os]
+url = "https://raw.githubusercontent.com/ariel-os/ariel-os/main/supply-chain/audits.toml"
+
+[imports.bytecode-alliance]
+url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
+
+[imports.embark-studios]
+url = "https://raw.githubusercontent.com/EmbarkStudios/rust-ecosystem/main/audits.toml"
+
+[imports.google]
+url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
+
+[imports.isrg]
+url = "https://raw.githubusercontent.com/divviup/libprio-rs/main/supply-chain/audits.toml"
+
+[imports.mozilla]
+url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
+
+[imports.zcash]
+url = "https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/audits.toml"
+
+[[exemptions.aes]]
+version = "0.8.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.aes]]
+version = "0.9.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.aes-kw]]
+version = "0.3.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.ansi-x963-kdf]]
+version = "0.1.0-rc.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.anstream]]
+version = "1.0.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.anstyle]]
+version = "1.0.14"
+criteria = "safe-to-deploy"
+
+[[exemptions.anstyle-parse]]
+version = "1.0.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.anstyle-query]]
+version = "1.1.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.anstyle-wincon]]
+version = "3.0.11"
+criteria = "safe-to-deploy"
+
+[[exemptions.anyhow]]
+version = "1.0.104"
+criteria = "safe-to-deploy"
+
+[[exemptions.autocfg]]
+version = "1.5.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.base16ct]]
+version = "1.0.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.base64ct]]
+version = "1.8.3"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.bitflags]]
+version = "2.13.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.block-buffer]]
+version = "0.12.1"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.block-padding]]
+version = "0.3.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.block-padding]]
+version = "0.4.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.cbc]]
+version = "0.1.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.cbc]]
+version = "0.2.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.cc]]
+version = "1.2.65"
+criteria = "safe-to-deploy"
+
+[[exemptions.cipher]]
+version = "0.5.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.clap]]
+version = "4.6.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.clap_builder]]
+version = "4.6.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.clap_derive]]
+version = "4.6.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.clap_lex]]
+version = "1.1.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.cmov]]
+version = "0.5.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.cms]]
+version = "0.3.0-rc.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.colorchoice]]
+version = "1.0.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.const-oid]]
+version = "0.10.2"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.core-foundation]]
+version = "0.10.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.cpubits]]
+version = "0.1.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.cpufeatures]]
+version = "0.2.17"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.crc32fast]]
+version = "1.5.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.crypto-bigint]]
+version = "0.7.10"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.crypto-common]]
+version = "0.2.2"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.crypto-primes]]
+version = "0.7.2"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.ctutils]]
+version = "0.4.6"
+criteria = "safe-to-deploy"
+
+[[exemptions.der]]
+version = "0.8.3"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.der_derive]]
+version = "0.8.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.digest]]
+version = "0.10.7"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.digest]]
+version = "0.11.3"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.displaydoc]]
+version = "0.2.6"
+criteria = "safe-to-deploy"
+
+[[exemptions.ecb]]
+version = "0.1.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.ecdsa]]
+version = "0.17.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.elliptic-curve]]
+version = "0.14.3"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.fastrand]]
+version = "2.4.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.ff]]
+version = "0.14.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.find-msvc-tools]]
+version = "0.1.9"
+criteria = "safe-to-deploy"
+
+[[exemptions.flagset]]
+version = "0.4.7"
+criteria = "safe-to-deploy"
+
+[[exemptions.flate2]]
+version = "1.1.9"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.generic-array]]
+version = "0.14.9"
+criteria = "safe-to-deploy"
+
+[[exemptions.getrandom]]
+version = "0.4.3"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.group]]
+version = "0.14.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.hashbrown]]
+version = "0.17.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.hkdf]]
+version = "0.13.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.hmac]]
+version = "0.13.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.hybrid-array]]
+version = "0.4.15"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.icu_collections]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_locale_core]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_normalizer]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_normalizer_data]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_properties]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_properties_data]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_provider]]
+version = "2.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.idna_adapter]]
+version = "1.2.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.inout]]
+version = "0.2.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.is_terminal_polyfill]]
+version = "1.70.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.itoa]]
+version = "1.0.18"
+criteria = "safe-to-deploy"
+
+[[exemptions.keccak]]
+version = "0.2.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.libc]]
+version = "0.2.186"
+criteria = "safe-to-deploy"
+
+[[exemptions.linux-raw-sys]]
+version = "0.12.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.litemap]]
+version = "0.8.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.lopdf]]
+version = "0.42.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.md-5]]
+version = "0.10.6"
+criteria = "safe-to-deploy"
+
+[[exemptions.memchr]]
+version = "2.8.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.native-tls]]
+version = "0.2.18"
+criteria = "safe-to-deploy"
+
+[[exemptions.nom]]
+version = "8.0.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.once_cell]]
+version = "1.21.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.once_cell_polyfill]]
+version = "1.70.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.openssl]]
+version = "0.10.78"
+criteria = "safe-to-deploy"
+
+[[exemptions.openssl-probe]]
+version = "0.2.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.openssl-sys]]
+version = "0.9.118"
+criteria = "safe-to-deploy"
+
+[[exemptions.p256]]
+version = "0.14.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.pem-rfc7468]]
+version = "1.0.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.pkcs1]]
+version = "0.8.0-rc.5"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.pkcs8]]
+version = "0.11.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.pkg-config]]
+version = "0.3.33"
+criteria = "safe-to-deploy"
+
+[[exemptions.potential_utf]]
+version = "0.1.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.primefield]]
+version = "0.14.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.primeorder]]
+version = "0.14.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.proptest]]
+version = "1.12.0"
+criteria = "safe-to-run"
+
+[[exemptions.quote]]
+version = "1.0.46"
+criteria = "safe-to-deploy"
+
+[[exemptions.r-efi]]
+version = "6.0.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.rand_xorshift]]
+version = "0.5.0"
+criteria = "safe-to-run"
+
+[[exemptions.rangemap]]
+version = "1.7.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.regex-syntax]]
+version = "0.8.11"
+criteria = "safe-to-run"
+
+[[exemptions.rfc6979]]
+version = "0.6.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.rsa]]
+version = "0.10.0-rc.19"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.rustix]]
+version = "1.1.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.schannel]]
+version = "0.1.29"
+criteria = "safe-to-deploy"
+
+[[exemptions.sec1]]
+version = "0.8.1"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.security-framework]]
+version = "3.7.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.security-framework-sys]]
+version = "2.17.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.serde_json]]
+version = "1.0.150"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.serdect]]
+version = "0.4.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.sha1]]
+version = "0.11.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.sha2]]
+version = "0.11.1"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.sha3]]
+version = "0.11.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.signature]]
+version = "3.0.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.simd-adler32]]
+version = "0.3.9"
+criteria = "safe-to-deploy"
+
+[[exemptions.spki]]
+version = "0.8.1"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.stable_deref_trait]]
+version = "1.2.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.stringprep]]
+version = "0.1.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.syn]]
+version = "2.0.118"
+criteria = "safe-to-deploy"
+
+[[exemptions.tempfile]]
+version = "3.27.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.thiserror]]
+version = "2.0.18"
+criteria = "safe-to-deploy"
+
+[[exemptions.thiserror-impl]]
+version = "2.0.18"
+criteria = "safe-to-deploy"
+
+[[exemptions.time]]
+version = "0.3.51"
+criteria = "safe-to-deploy"
+
+[[exemptions.time-macros]]
+version = "0.2.30"
+criteria = "safe-to-deploy"
+
+[[exemptions.tinystr]]
+version = "0.8.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.tinyvec]]
+version = "1.11.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.tls_codec]]
+version = "0.4.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.tls_codec_derive]]
+version = "0.4.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.ttf-parser]]
+version = "0.25.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.typenum]]
+version = "1.20.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.unicode-ident]]
+version = "1.0.24"
+criteria = "safe-to-deploy"
+
+[[exemptions.unicode-properties]]
+version = "0.1.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.ureq]]
+version = "2.12.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.url]]
+version = "2.5.8"
+criteria = "safe-to-deploy"
+
+[[exemptions.version_check]]
+version = "0.9.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.weezl]]
+version = "0.1.12"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.windows-sys]]
+version = "0.61.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.wnaf]]
+version = "0.14.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.writeable]]
+version = "0.6.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.x509-cert]]
+version = "0.3.0"
+criteria = "safe-to-deploy"
+notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
+
+[[exemptions.yoke]]
+version = "0.8.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.yoke-derive]]
+version = "0.8.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerofrom]]
+version = "0.1.8"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerofrom-derive]]
+version = "0.1.7"
+criteria = "safe-to-deploy"
+
+[[exemptions.zeroize_derive]]
+version = "1.5.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerotrie]]
+version = "0.2.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerovec]]
+version = "0.11.6"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerovec-derive]]
+version = "0.11.3"
+criteria = "safe-to-deploy"
