@@ -38,7 +38,7 @@
 
   const STRINGS = {
     en: {
-      title: "SignPDF Verifier",
+      title: "Sovrasign Verify",
       lede: "Check a signed PDF's signatures, signing history and signer identities. Everything runs in your browser —",
       lede_strong: "the document is never uploaded",
       language: "Language",
@@ -54,7 +54,7 @@
       revisions_h: "Revisions",
       audit_h: "Audit trail",
       raw_h: "Raw report (JSON)",
-      footer: "Powered by the SignPDF Rust core compiled to WebAssembly. Verification is offline; the only network requests are the optional provider-key fetches you trigger above.",
+      footer: "Sovrasign Verify is open source; its signing engine runs in your browser, compiled to WebAssembly. Verification is offline; the only network requests are the optional provider-key fetches you trigger above.",
       issuer_keys: "{n} pinned key(s)",
       issuer_apps: "{n} trusted application(s)",
       issuer_no_apps: "no trusted application",
@@ -155,7 +155,7 @@
     },
 
     de: {
-      title: "SignPDF-Prüfung",
+      title: "Sovrasign Verify",
       lede: "Prüfen Sie Signaturen, Signaturverlauf und Identitäten der Unterzeichner eines signierten PDFs. Alles läuft in Ihrem Browser —",
       lede_strong: "das Dokument wird nie hochgeladen",
       language: "Sprache",
@@ -171,7 +171,7 @@
       revisions_h: "Revisionen",
       audit_h: "Prüfprotokoll",
       raw_h: "Rohbericht (JSON)",
-      footer: "Betrieben mit dem SignPDF-Rust-Kern, kompiliert zu WebAssembly. Die Prüfung läuft offline; die einzigen Netzwerkanfragen sind die optionalen Abrufe von Anbieterschlüsseln, die Sie oben auslösen.",
+      footer: "Sovrasign Verify ist Open Source; seine Signatur-Engine läuft in Ihrem Browser, kompiliert zu WebAssembly. Die Prüfung läuft offline; die einzigen Netzwerkanfragen sind die optionalen Abrufe von Anbieterschlüsseln, die Sie oben auslösen.",
       issuer_keys: "{n} fest hinterlegte(r) Schlüssel",
       issuer_apps: "{n} vertrauenswürdige Anwendung(en)",
       issuer_no_apps: "keine vertrauenswürdige Anwendung",
@@ -272,7 +272,7 @@
     },
 
     es: {
-      title: "Verificador SignPDF",
+      title: "Sovrasign Verify",
       lede: "Compruebe las firmas, el historial de firma y las identidades de los firmantes de un PDF firmado. Todo se ejecuta en su navegador —",
       lede_strong: "el documento nunca se sube",
       language: "Idioma",
@@ -288,7 +288,7 @@
       revisions_h: "Revisiones",
       audit_h: "Registro de auditoría",
       raw_h: "Informe sin procesar (JSON)",
-      footer: "Funciona con el núcleo Rust de SignPDF compilado a WebAssembly. La verificación es sin conexión; las únicas solicitudes de red son las descargas opcionales de claves de proveedores que usted inicie arriba.",
+      footer: "Sovrasign Verify es de código abierto; su motor de firma se ejecuta en su navegador, compilado a WebAssembly. La verificación es sin conexión; las únicas solicitudes de red son las descargas opcionales de claves de proveedores que usted inicie arriba.",
       issuer_keys: "{n} clave(s) fijada(s)",
       issuer_apps: "{n} aplicación(es) de confianza",
       issuer_no_apps: "ninguna aplicación de confianza",
@@ -389,7 +389,7 @@
     },
 
     fr: {
-      title: "Vérificateur SignPDF",
+      title: "Sovrasign Verify",
       lede: "Vérifiez les signatures, l'historique de signature et l'identité des signataires d'un PDF signé. Tout s'exécute dans votre navigateur —",
       lede_strong: "le document n'est jamais envoyé",
       language: "Langue",
@@ -405,7 +405,7 @@
       revisions_h: "Révisions",
       audit_h: "Journal d'audit",
       raw_h: "Rapport brut (JSON)",
-      footer: "Propulsé par le cœur Rust de SignPDF compilé en WebAssembly. La vérification se fait hors ligne ; les seules requêtes réseau sont les récupérations facultatives de clés que vous déclenchez ci-dessus.",
+      footer: "Sovrasign Verify est open source ; son moteur de signature s'exécute dans votre navigateur, compilé en WebAssembly. La vérification se fait hors ligne ; les seules requêtes réseau sont les récupérations facultatives de clés que vous déclenchez ci-dessus.",
       issuer_keys: "{n} clé(s) épinglée(s)",
       issuer_apps: "{n} application(s) de confiance",
       issuer_no_apps: "aucune application de confiance",
@@ -506,7 +506,7 @@
     },
 
     it: {
-      title: "Verificatore SignPDF",
+      title: "Sovrasign Verify",
       lede: "Controlla le firme, la cronologia di firma e le identità dei firmatari di un PDF firmato. Tutto avviene nel tuo browser —",
       lede_strong: "il documento non viene mai caricato",
       language: "Lingua",
@@ -522,7 +522,7 @@
       revisions_h: "Revisioni",
       audit_h: "Registro di controllo",
       raw_h: "Rapporto grezzo (JSON)",
-      footer: "Basato sul nucleo Rust di SignPDF compilato in WebAssembly. La verifica avviene offline; le uniche richieste di rete sono i download facoltativi delle chiavi dei provider che avvii qui sopra.",
+      footer: "Sovrasign Verify è open source; il suo motore di firma viene eseguito nel tuo browser, compilato in WebAssembly. La verifica avviene offline; le uniche richieste di rete sono i download facoltativi delle chiavi dei provider che avvii qui sopra.",
       issuer_keys: "{n} chiave/i fissata/e",
       issuer_apps: "{n} applicazione/i attendibile/i",
       issuer_no_apps: "nessuna applicazione attendibile",
@@ -623,7 +623,7 @@
     },
 
     ja: {
-      title: "SignPDF 検証ツール",
+      title: "Sovrasign Verify",
       lede: "署名済み PDF の署名、署名の履歴、署名者の本人性を確認します。すべてブラウザー内で実行されます —",
       lede_strong: "文書がアップロードされることはありません",
       language: "言語",
@@ -639,7 +639,7 @@
       revisions_h: "リビジョン",
       audit_h: "監査証跡",
       raw_h: "生のレポート (JSON)",
-      footer: "WebAssembly にコンパイルされた SignPDF の Rust コアで動作します。検証はオフラインで行われ、ネットワーク通信は上で実行するプロバイダー鍵の任意の取得だけです。",
+      footer: "Sovrasign Verify はオープンソースです。署名エンジンは WebAssembly にコンパイルされ、お使いのブラウザーで動作します。検証はオフラインで行われ、ネットワーク通信は上で実行するプロバイダー鍵の任意の取得だけです。",
       issuer_keys: "固定された鍵 {n} 件",
       issuer_apps: "信頼するアプリケーション {n} 件",
       issuer_no_apps: "信頼するアプリケーションなし",
@@ -740,7 +740,7 @@
     },
 
     ko: {
-      title: "SignPDF 검증기",
+      title: "Sovrasign Verify",
       lede: "서명된 PDF의 서명, 서명 기록, 서명자 신원을 확인합니다. 모든 작업은 브라우저에서 실행됩니다 —",
       lede_strong: "문서는 절대 업로드되지 않습니다",
       language: "언어",
@@ -756,7 +756,7 @@
       revisions_h: "개정",
       audit_h: "감사 기록",
       raw_h: "원본 보고서 (JSON)",
-      footer: "WebAssembly로 컴파일된 SignPDF Rust 코어로 동작합니다. 검증은 오프라인으로 이루어지며, 네트워크 요청은 위에서 직접 실행하는 선택적 제공자 키 가져오기뿐입니다.",
+      footer: "Sovrasign Verify는 오픈 소스입니다. 서명 엔진은 WebAssembly로 컴파일되어 브라우저에서 실행됩니다. 검증은 오프라인으로 이루어지며, 네트워크 요청은 위에서 직접 실행하는 선택적 제공자 키 가져오기뿐입니다.",
       issuer_keys: "고정된 키 {n}개",
       issuer_apps: "신뢰하는 애플리케이션 {n}개",
       issuer_no_apps: "신뢰하는 애플리케이션 없음",
@@ -857,7 +857,7 @@
     },
 
     pt: {
-      title: "Verificador SignPDF",
+      title: "Sovrasign Verify",
       lede: "Verifique as assinaturas, o histórico de assinatura e as identidades dos signatários de um PDF assinado. Tudo é executado no seu navegador —",
       lede_strong: "o documento nunca é enviado",
       language: "Idioma",
@@ -873,7 +873,7 @@
       revisions_h: "Revisões",
       audit_h: "Trilha de auditoria",
       raw_h: "Relatório bruto (JSON)",
-      footer: "Desenvolvido com o núcleo Rust do SignPDF compilado para WebAssembly. A verificação é offline; as únicas solicitações de rede são as obtenções opcionais de chaves de provedores que você aciona acima.",
+      footer: "O Sovrasign Verify é de código aberto; seu mecanismo de assinatura é executado no seu navegador, compilado para WebAssembly. A verificação é offline; as únicas solicitações de rede são as obtenções opcionais de chaves de provedores que você aciona acima.",
       issuer_keys: "{n} chave(s) fixada(s)",
       issuer_apps: "{n} aplicativo(s) confiável(is)",
       issuer_no_apps: "nenhum aplicativo confiável",
@@ -974,7 +974,7 @@
     },
 
     ru: {
-      title: "Проверка SignPDF",
+      title: "Sovrasign Verify",
       lede: "Проверьте подписи, историю подписания и личности подписантов в подписанном PDF. Всё выполняется в вашем браузере —",
       lede_strong: "документ никуда не загружается",
       language: "Язык",
@@ -990,7 +990,7 @@
       revisions_h: "Редакции",
       audit_h: "Журнал аудита",
       raw_h: "Исходный отчёт (JSON)",
-      footer: "Работает на ядре SignPDF на Rust, скомпилированном в WebAssembly. Проверка выполняется офлайн; единственные сетевые запросы — необязательная загрузка ключей поставщиков, которую вы запускаете выше.",
+      footer: "Sovrasign Verify — проект с открытым исходным кодом; его движок подписи, скомпилированный в WebAssembly, работает в вашем браузере. Проверка выполняется офлайн; единственные сетевые запросы — необязательная загрузка ключей поставщиков, которую вы запускаете выше.",
       issuer_keys: "закреплённых ключей: {n}",
       issuer_apps: "доверенных приложений: {n}",
       issuer_no_apps: "нет доверенных приложений",
@@ -1091,7 +1091,7 @@
     },
 
     zh: {
-      title: "SignPDF 验证器",
+      title: "Sovrasign Verify",
       lede: "检查已签名 PDF 的签名、签署历史和签署人身份。一切都在您的浏览器中运行 —",
       lede_strong: "文档绝不会被上传",
       language: "语言",
@@ -1107,7 +1107,7 @@
       revisions_h: "修订",
       audit_h: "审计记录",
       raw_h: "原始报告 (JSON)",
-      footer: "由编译为 WebAssembly 的 SignPDF Rust 核心驱动。验证在离线状态下进行；唯一的网络请求是您在上方手动触发的可选提供方密钥获取。",
+      footer: "Sovrasign Verify 是开源的；其签名引擎编译为 WebAssembly，在您的浏览器中运行。验证在离线状态下进行；唯一的网络请求是您在上方手动触发的可选提供方密钥获取。",
       issuer_keys: "{n} 个固定密钥",
       issuer_apps: "{n} 个受信任的应用",
       issuer_no_apps: "没有受信任的应用",

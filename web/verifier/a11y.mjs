@@ -67,7 +67,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll("#issuers li").length > 0);
     // A German browser gets the German page.
     const first = await page.evaluate(() => [document.documentElement.lang, document.querySelector("h1").textContent]);
-    if (first[0] !== "de" || first[1] !== "SignPDF-Prüfung") problems.push(`${colorScheme}: a German browser got ${first}`);
+    if (first[0] !== "de" || first[1] !== "Sovrasign Verify") problems.push(`${colorScheme}: a German browser got ${first}`);
     problems.push(...(await axe(page, `${colorScheme} de, empty`)));
     await page.setInputFiles("#pdf", pdf);
     await page.waitForSelector("#result:not([hidden]) #verdict:not(:empty)");
@@ -77,7 +77,7 @@ try {
     // Switch to English: the words and lang follow, the report is shown again in English.
     await page.selectOption("#lang", "en");
     const after = await page.evaluate(() => [document.documentElement.lang, document.querySelector("h1").textContent, document.getElementById("verdict").textContent]);
-    if (after[0] !== "en" || after[1] !== "SignPDF Verifier" || !/^(Valid|Intact|Invalid)/.test(after[2])) problems.push(`${colorScheme}: switching to English gave ${after}`);
+    if (after[0] !== "en" || after[1] !== "Sovrasign Verify" || !/^(Valid|Intact|Invalid)/.test(after[2])) problems.push(`${colorScheme}: switching to English gave ${after}`);
     problems.push(...(await axe(page, `${colorScheme} en, verified`)));
     // The choice is remembered over the browser's language.
     await page.reload();

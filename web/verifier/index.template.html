@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; require-trusted-types-for 'script'; trusted-types 'none'">
-  <title data-i18n="title">SignPDF Verifier</title>
+  <title data-i18n="title">Sovrasign Verify</title>
   <link rel="stylesheet" href="verifier.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
       <label for="lang" data-i18n="language">Language</label>
       <select id="lang"></select>
     </div>
-    <h1 data-i18n="title">SignPDF Verifier</h1>
+    <h1 data-i18n="title">Sovrasign Verify</h1>
     <p class="lede"><span data-i18n="lede">Check a signed PDF's signatures, signing history and signer identities.
       Everything runs in your browser —</span> <strong data-i18n="lede_strong">the document is never uploaded</strong>.</p>
     <p class="muted" id="draft-note" data-i18n="draft_note" hidden></p>
@@ -67,7 +67,7 @@
   </main>
 
   <footer class="muted" data-i18n="footer">
-    Powered by the SignPDF Rust core compiled to WebAssembly. Verification is offline; the only
+    Sovrasign Verify is open source; its signing engine runs in your browser, compiled to WebAssembly. Verification is offline; the only
     network requests are the optional provider-key fetches you trigger above.
   </footer>
   <script src="verifier-i18n.js"></script>
