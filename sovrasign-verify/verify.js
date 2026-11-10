@@ -21,6 +21,7 @@ import {
   isDevTrust,
   providerName,
   revisionCard,
+  senderLine,
   revisionView,
   stampView,
   statusLine,
@@ -326,12 +327,12 @@ function renderRevision(s, report) {
   const li = el("li");
   const who = el("div", undefined, "who");
   who.append(el("span", v.role, "role"));
-  const label = v.name || v.email || "Unknown";
+  const label = v.who;
   who.append(el("strong", label));
   for (const t of v.tags) who.append(el("span", t.text, `tag ${t.kind}`));
   if (v.method) who.append(el("span", v.method, "method"));
   li.append(who);
-  if (v.name && v.email && v.name !== v.email) li.append(el("p", v.email, "line small muted"));
+  if (v.label) li.append(el("p", v.label, "line small muted"));
   for (const line of card.alerts) li.append(el("p", line, "why"));
   if (card.details.length) {
     const id = `details-${++detailsCount}`;
@@ -393,12 +394,8 @@ function renderReport(report) {
   const summary = $("summary");
   summary.replaceChildren();
   summary.append(el("div", statusLine(report)));
-  if (env.created_by || env.created_by_email) {
-    const by = env.created_by && env.created_by_email && env.created_by !== env.created_by_email
-      ? `${env.created_by} <${env.created_by_email}>`
-      : env.created_by || env.created_by_email;
-    summary.append(el("div", `Sent by ${by}`, "muted"));
-  }
+  const sent = senderLine(report);
+  if (sent) summary.append(el("div", sent, "muted"));
   // An envelope of several documents, signed together as this one PDF.
   const docs = documentsView(report);
   if (docs.length) {

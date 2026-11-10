@@ -377,17 +377,33 @@ function boundSource(e) {
 }
 
 /**
+ * Who a revision names, as the page headlines it: the email address the engine verified, and only
+ * when its provider is trusted (spec; SECURITY_MODEL). The sender's names for a slot
+ * or for themself are text the sender typed: never the headline, and shown marked as such.
+ */
+function verifiedEmail(s) {
+  return s.idp_email && s.identity_trust === "trusted" ? s.idp_email : "";
+}
+
+/**
  * One revision in words, for the page to lay out:
- * {role, name, email, valid, tags: [{text, kind}], method, identity: [lines], why, time, bounds,
- *  consent, code, detail}.
+ * {role, who, label, email, valid, tags: [{text, kind}], method, identity: [lines], why, time,
+ *  bounds, consent, code, detail}. `who` is the verified email (or "Unverified identity"); `label`
+ * is the sender's unverified name for the slot (or their own), in words, or "".
  */
 export function revisionView(s, report, trust) {
   const env = report.envelope || {};
   const slot = (env.signers || []).find((x) => x.id === s.signer_id);
   const preparer = s.kind === "prepared";
   const role = preparer ? "Prepared and sent by" : s.kind === "declined" ? "Declined by" : "Signed by";
-  const name = preparer ? env.created_by || "" : slot?.name || "";
-  const email = s.idp_email || (preparer ? env.created_by_email : slot?.email) || "";
+  const email = verifiedEmail(s);
+  const who = email || "Unverified identity";
+  const given = (preparer ? env.created_by : slot?.name) || "";
+  const label = given && given !== email
+    ? preparer
+      ? `Gave the name “${given}” (typed by the sender, not verified)`
+      : `Slot named “${given}” by the sender (not verified)`
+    : "";
 
   const tags = [];
   tags.push(s.valid ? { text: "Valid", kind: "ok" } : { text: "Not valid", kind: "bad" });
@@ -438,7 +454,8 @@ export function revisionView(s, report, trust) {
   }
   return {
     role,
-    name,
+    who,
+    label,
     email,
     valid: !!s.valid,
     tags,
@@ -473,6 +490,16 @@ export function revisionCard(view) {
   if (view.consent) details.push({ text: view.consent, muted: true });
   if (view.code) details.push({ text: `${view.code}: the code printed in this signature's box in the PDF.`, muted: true });
   return { alerts, details };
+}
+
+/**
+ * The summary's "Sent by" line: the preparer's verified email, never the envelope's own fields
+ * (which the sender typed), or "" when the preparer's identity is not verified.
+ */
+export function senderLine(report) {
+  const prep = report.preparer;
+  const email = prep ? verifiedEmail(prep) : "";
+  return email ? `Sent by ${email}` : "";
 }
 
 /** A document timestamp in words. */

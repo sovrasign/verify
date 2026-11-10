@@ -36,8 +36,8 @@ use crate::ink::{self, SignatureDrawing};
 use crate::ltv;
 use crate::messages::{self as m, Finding, MessageCode, Severity};
 use crate::model::{
-    AuditAction, Envelope, EnvelopeDocument, EsignConsent, Field, FieldType, Policy, RecordKind,
-    SignatureRecord, Signer, SignerStatus, TimestampPolicy,
+    AuditAction, AuditEntry, Envelope, EnvelopeDocument, EsignConsent, Field, FieldType, Policy,
+    RecordKind, SignatureRecord, Signer, SignerStatus, TimestampPolicy,
 };
 use crate::numbers::NumberFormat;
 use crate::oidc::{
@@ -522,64 +522,133 @@ fn refuse_newer_envelope(source_pdf: &[u8]) -> Result<()> {
 /// Validate a prepare request against the source document.
 fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Result<()> {
     let wf = |m: String| Err(SignPdfError::Workflow(m));
-    if request.title.trim().is_empty() {
-        return wf("a document title is required".into());
-    }
-    if request.signers.is_empty() {
-        return wf("at least one signer is required".into());
-    }
-    let mut ids: Vec<&str> = Vec::new();
-    for s in &request.signers {
-        if s.id.trim().is_empty() {
-            return wf("every signer needs a non-empty id".into());
-        }
-        if ids.contains(&s.id.as_str()) {
-            return wf(format!("duplicate signer id '{}'", s.id));
-        }
-        if s.order == 0 {
-            return wf(format!(
-                "signer '{}' has order 0 (orders are 1-based)",
-                s.id
-            ));
-        }
-        if let Err(e) = s.identity_policy.fillable_by_this_build() {
-            return wf(format!("signer '{}' cannot be filled: the slot {e}", s.id));
-        }
-        ids.push(&s.id);
-    }
     let geometry = pades::page_geometry(source_pdf)
         .map_err(|e| SignPdfError::Workflow(format!("source PDF cannot be parsed: {e}")))?;
     let pages = geometry.len() as u32;
     documents::check_index(&request.documents, pages)
         .map_err(|e| SignPdfError::Workflow(format!("the documents index is not valid: {e}")))?;
+    check_prepared_terms(
+        &PreparedTerms {
+            title: &request.title,
+            signers: request
+                .signers
+                .iter()
+                .map(|s| (s.id.as_str(), s.order))
+                .collect(),
+            fields: &request.fields,
+            signing_order: request.policy.signing_order,
+            service_link: request.service_link.as_deref(),
+            verify_at: request.verify_at.as_deref(),
+        },
+        &geometry,
+    )
+    .map_err(SignPdfError::Workflow)?;
+    // Rules of this build and this moment: checked when preparing, not when verifying.
+    for s in &request.signers {
+        if let Err(e) = s.identity_policy.fillable_by_this_build() {
+            return wf(format!("signer '{}' cannot be filled: the slot {e}", s.id));
+        }
+    }
+    if let Some(exp) = &request.policy.expiry {
+        let t = unix_from_rfc3339(exp).ok_or_else(|| {
+            SignPdfError::Workflow(format!("policy expiry '{exp}' is not an RFC 3339 time"))
+        })?;
+        if t <= now_unix() {
+            return wf(format!("policy expiry {exp} is already in the past"));
+        }
+    }
+    Ok(())
+}
+
+/// The prepared terms [`check_prepared_terms`] holds to the rules.
+struct PreparedTerms<'a> {
+    title: &'a str,
+    /// Each slot's id and order.
+    signers: Vec<(&'a str, u32)>,
+    fields: &'a [Field],
+    signing_order: crate::model::SigningOrder,
+    service_link: Option<&'a str>,
+    verify_at: Option<&'a str>,
+}
+
+impl<'a> PreparedTerms<'a> {
+    /// The terms an envelope was prepared with.
+    fn of(env: &'a Envelope) -> Self {
+        Self {
+            title: &env.title,
+            signers: env
+                .signers
+                .iter()
+                .map(|s| (s.id.as_str(), s.order))
+                .collect(),
+            fields: &env.fields,
+            signing_order: env.policy.signing_order,
+            service_link: env.service_link.as_deref(),
+            verify_at: env.verify_at.as_deref(),
+        }
+    }
+}
+
+/// The rules every set of prepared terms follows, checked by [`prepare`] on its request and by
+/// the verifier on the prepared revision's envelope (a modified preparing client could write
+/// anything there): a title, at least one slot, unique non-empty slot ids with 1-based orders,
+/// unique field ids on known slots and on the document's visible pages, no pre-filled value,
+/// field settings that suit their types, radio groups held by one signer, formulas over the
+/// same or earlier signers' inputs, and a usable service link and 'verify at' address. Rules
+/// that depend on this build or on the current time (an identity policy this build can fill, an
+/// expiry still ahead) are checked when preparing only.
+fn check_prepared_terms(
+    terms: &PreparedTerms<'_>,
+    geometry: &[pades::PageGeometry],
+) -> std::result::Result<(), String> {
+    let pages = geometry.len() as u32;
+    if terms.title.trim().is_empty() {
+        return Err("a document title is required".into());
+    }
+    if terms.signers.is_empty() {
+        return Err("at least one signer is required".into());
+    }
+    let mut ids: Vec<&str> = Vec::new();
+    for &(id, order) in &terms.signers {
+        if id.trim().is_empty() {
+            return Err("every signer needs a non-empty id".into());
+        }
+        if ids.contains(&id) {
+            return Err(format!("duplicate signer id '{id}'"));
+        }
+        if order == 0 {
+            return Err(format!("signer '{id}' has order 0 (orders are 1-based)"));
+        }
+        ids.push(id);
+    }
     let mut field_ids: Vec<&str> = Vec::new();
-    for f in &request.fields {
+    for f in terms.fields {
         if field_ids.contains(&f.id.as_str()) {
-            return wf(format!("duplicate field id '{}'", f.id));
+            return Err(format!("duplicate field id '{}'", f.id));
         }
         field_ids.push(&f.id);
         if !ids.contains(&f.assigned_signer.as_str()) {
-            return wf(format!(
+            return Err(format!(
                 "field {} is assigned to unknown signer {}",
                 f.id, f.assigned_signer
             ));
         }
         if f.page >= pages {
-            return wf(format!(
+            return Err(format!(
                 "field {} is on page index {} but the document has {pages} page(s)",
                 f.id, f.page
             ));
         }
         let r = &f.rect;
         if !(r.w > 0.0 && r.h > 0.0 && r.x.is_finite() && r.y.is_finite()) {
-            return wf(format!("field {} has an empty or invalid rectangle", f.id));
+            return Err(format!("field {} has an empty or invalid rectangle", f.id));
         }
         // The field must lie on the visible part of its page (0.5 pt tolerance for rounding).
         let crop = geometry[f.page as usize].crop_box;
         let [x1, y1, x2, y2] = field_rect(f);
         const TOL: f32 = 0.5;
         if x1 < crop[0] - TOL || y1 < crop[1] - TOL || x2 > crop[2] + TOL || y2 > crop[3] + TOL {
-            return wf(format!(
+            return Err(format!(
                 "field {} lies outside page {} (visible area {:?})",
                 f.id,
                 f.page + 1,
@@ -587,10 +656,10 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
             ));
         }
         if f.value.is_some() {
-            return wf(format!("field {} must not be pre-filled", f.id));
+            return Err(format!("field {} must not be pre-filled", f.id));
         }
         if f.label.as_deref().is_some_and(|l| l.chars().count() > 120) {
-            return wf(format!(
+            return Err(format!(
                 "field {} has a label longer than 120 characters",
                 f.id
             ));
@@ -599,13 +668,13 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
         let captioned = f.label.as_deref().is_some_and(|l| !l.trim().is_empty());
         match f.field_type {
             FieldType::Checkbox if !captioned => {
-                return wf(format!(
+                return Err(format!(
                     "checkbox {} needs a label: the text shown next to the box",
                     f.id
                 ));
             }
             FieldType::Radio if !captioned => {
-                return wf(format!(
+                return Err(format!(
                     "radio option {} needs a label: the text shown next to the button",
                     f.id
                 ));
@@ -614,26 +683,26 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
         }
         match (&f.group, f.field_type) {
             (Some(g), FieldType::Radio) if g.trim().is_empty() || g.chars().count() > 120 => {
-                return wf(format!(
+                return Err(format!(
                     "radio option {} has an empty or over-long group name",
                     f.id
                 ));
             }
             (None, FieldType::Radio) => {
-                return wf(format!("radio option {} needs a group", f.id));
+                return Err(format!("radio option {} needs a group", f.id));
             }
             (Some(_), FieldType::Radio) | (None, _) => {}
             (Some(_), _) => {
-                return wf(format!(
+                return Err(format!(
                     "field {} has a group, but only radio options are grouped",
                     f.id
                 ));
             }
         }
-        check_options(f).map_err(SignPdfError::Workflow)?;
+        check_options(f)?;
         match (&f.number_format, f.field_type) {
             (None, FieldType::Number) => {
-                return wf(format!(
+                return Err(format!(
                     "number field {} needs a number format (its decimal places)",
                     f.id
                 ));
@@ -641,10 +710,10 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
             (Some(format), FieldType::Number) => {
                 format
                     .validate()
-                    .map_err(|e| SignPdfError::Workflow(format!("number field {} {e}", f.id)))?;
+                    .map_err(|e| format!("number field {} {e}", f.id))?;
             }
             (None, FieldType::Formula) => {
-                return wf(format!(
+                return Err(format!(
                     "formula field {} needs a number format (its decimal places)",
                     f.id
                 ));
@@ -652,17 +721,17 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
             (Some(format), FieldType::Formula) => {
                 format
                     .validate()
-                    .map_err(|e| SignPdfError::Workflow(format!("formula field {} {e}", f.id)))?;
+                    .map_err(|e| format!("formula field {} {e}", f.id))?;
                 // A computed value has no range: the signer could not correct one outside it.
                 if format.min.is_some() || format.max.is_some() {
-                    return wf(format!(
+                    return Err(format!(
                         "formula field {} has a minimum or maximum, which only number fields have",
                         f.id
                     ));
                 }
             }
             (Some(_), _) => {
-                return wf(format!(
+                return Err(format!(
                     "field {} has a number format, but only number fields (and formula fields) do",
                     f.id
                 ));
@@ -671,19 +740,19 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
         }
         match (&f.formula, f.field_type) {
             (None, FieldType::Formula) => {
-                return wf(format!("formula field {} needs a formula", f.id));
+                return Err(format!("formula field {} needs a formula", f.id));
             }
             (Some(_), t) if t != FieldType::Formula => {
-                return wf(format!(
+                return Err(format!(
                     "field {} has a formula, but only formula fields do",
                     f.id
                 ));
             }
             _ => {}
         }
-        check_field_rules(f).map_err(SignPdfError::Workflow)?;
+        check_field_rules(f)?;
         if f.field_type != FieldType::Date && (f.date_format.is_some() || f.signing_date) {
-            return wf(format!(
+            return Err(format!(
                 "field {} has a date format or is marked as the signing date, but only date \
                  fields are",
                 f.id
@@ -691,7 +760,7 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
         }
     }
     // Radio groups: at least two options, one signer, one `required` setting, distinct captions.
-    let radios: Vec<&Field> = request
+    let radios: Vec<&Field> = terms
         .fields
         .iter()
         .filter(|f| f.field_type == FieldType::Radio)
@@ -703,17 +772,17 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
             .filter(|o| o.group.as_deref() == Some(group))
             .collect();
         if members.len() < 2 {
-            return wf(format!("radio group '{group}' needs at least two options"));
+            return Err(format!("radio group '{group}' needs at least two options"));
         }
         let first = members[0];
         if f.assigned_signer != first.assigned_signer {
-            return wf(format!(
+            return Err(format!(
                 "radio group '{group}' is split between signers {} and {}",
                 first.assigned_signer, f.assigned_signer
             ));
         }
         if f.required != first.required {
-            return wf(format!(
+            return Err(format!(
                 "radio group '{group}' mixes required and optional options"
             ));
         }
@@ -721,7 +790,7 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
         if radios[..i].iter().any(|o| {
             o.group.as_deref() == Some(group) && o.label.as_deref().map(str::trim) == caption
         }) {
-            return wf(format!(
+            return Err(format!(
                 "radio group '{group}' has two options labelled '{}'",
                 caption.unwrap_or_default()
             ));
@@ -730,24 +799,16 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
     // Formula fields: readable formulas over known number inputs of the same or an earlier
     // signer, every option of a choice they read given a number, no loops.
     formula::check_formula_fields(
-        &request.fields,
-        |id| request.signers.iter().find(|s| s.id == id).map(|s| s.order),
-        request.policy.signing_order,
+        terms.fields,
+        |id| terms.signers.iter().find(|s| s.0 == id).map(|s| s.1),
+        terms.signing_order,
     )
-    .map_err(|e| SignPdfError::Workflow(format!("{e} ({})", e.code)))?;
-    if let Some(exp) = &request.policy.expiry {
-        let t = unix_from_rfc3339(exp).ok_or_else(|| {
-            SignPdfError::Workflow(format!("policy expiry '{exp}' is not an RFC 3339 time"))
-        })?;
-        if t <= now_unix() {
-            return wf(format!("policy expiry {exp} is already in the past"));
-        }
+    .map_err(|e| format!("{e} ({})", e.code))?;
+    if let Some(link) = terms.service_link {
+        check_service_link(link)?;
     }
-    if let Some(link) = &request.service_link {
-        check_service_link(link).map_err(SignPdfError::Workflow)?;
-    }
-    if let Some(address) = &request.verify_at {
-        check_verify_at(address).map_err(SignPdfError::Workflow)?;
+    if let Some(address) = terms.verify_at {
+        check_verify_at(address)?;
     }
     Ok(())
 }
@@ -2814,6 +2875,33 @@ fn check_preparer_revision(
                         "the preparer revision must add exactly one signature field",
                     ));
                 }
+                // The prepared terms follow the rules `prepare` enforces: a modified preparing
+                // client could write anything here (two slots with one id, a pre-filled value, a
+                // formula reading a later signer's field), and no slot is bound to a key yet.
+                match pades::page_geometry(&pdf[..src_len]) {
+                    Ok(geometry) => {
+                        if let Err(e) = check_prepared_terms(&PreparedTerms::of(env), &geometry) {
+                            problems.push(Finding::new(
+                                m::PREPARER_REVISION_INVALID,
+                                format!("the prepared terms break a rule: {e}"),
+                            ));
+                        }
+                    }
+                    Err(e) => problems.push(Finding::new(
+                        m::PREPARER_REVISION_INVALID,
+                        format!("the source document's pages cannot be read: {e}"),
+                    )),
+                }
+                if env
+                    .signers
+                    .iter()
+                    .any(|s| s.public_key.is_some() || s.fingerprint.is_some())
+                {
+                    problems.push(Finding::new(
+                        m::PREPARER_REVISION_INVALID,
+                        "a slot of the prepared envelope is already bound to a key",
+                    ));
+                }
                 // The documents index covers the source's pages (the page tree cannot change).
                 if let Err(e) = documents::check_index(&env.documents, audit.pages) {
                     problems.push(Finding::new(
@@ -3146,6 +3234,14 @@ fn check_signer_revision(
                                 ),
                             ));
                         }
+                    }
+                    if let Some(why) = cur
+                        .env
+                        .audit_log
+                        .last()
+                        .and_then(|e| audit_entry_identity_problem(e, r, &identity))
+                    {
+                        problems.push(Finding::new(m::IDENTITY_FAILED, why));
                     }
                     if problems.is_empty() {
                         status.detail = format!(
@@ -3494,8 +3590,10 @@ fn check_added_annotations(
                     .fields
                     .iter()
                     .find(|f| a.name.as_deref() == Some(field_annotation_name(&f.id).as_str()));
-                match field {
-                    Some(f)
+                // Only a field that shows something has an annotation: one on a field that shows
+                // nothing would draw an appearance nothing is compared with.
+                match field.and_then(|f| Some((f, field_text(f)?))) {
+                    Some((f, expected))
                         if f.assigned_signer == rec.signer_id
                             && rec.kind == RecordKind::Signed
                             && a.page_index == f.page
@@ -3505,9 +3603,7 @@ fn check_added_annotations(
                     {
                         seen_fields.push(f.id.clone());
                         // The recorded text is right; so must be what the page shows.
-                        if let Some(expected) = field_text(f) {
-                            problems.extend(pades::check_field_annotation(a, &expected));
-                        }
+                        problems.extend(pades::check_field_annotation(a, &expected));
                     }
                     _ => problems.push(
                         "a text annotation was added that does not match the signer's field values"
@@ -3520,6 +3616,22 @@ fn check_added_annotations(
     }
     if widgets != 1 {
         problems.push("the revision must add exactly one signature field".into());
+    }
+    // Every value the signer records must be on the page: otherwise the envelope says one thing
+    // and every viewer, and every later signer, sees a blank field.
+    if rec.kind == RecordKind::Signed {
+        for f in env
+            .fields
+            .iter()
+            .filter(|f| f.assigned_signer == rec.signer_id)
+        {
+            if field_text(f).is_some() && !seen_fields.contains(&f.id) {
+                problems.push(format!(
+                    "field {} has a recorded value that the page does not show",
+                    f.id
+                ));
+            }
+        }
     }
     problems
 }
@@ -3575,7 +3687,8 @@ fn signature_caption(identity: &VerifiedIdentity, code: &str, signed_at: &str) -
 
 /// Whether an annotation's `/Contents` is what the value of field `f` renders to. The legacy
 /// rendition (every non-ASCII character as `?`) is what the engine wrote before it drew the
-/// WinAnsi range; documents signed then must still verify.
+/// WinAnsi range; documents signed then must still verify. A field that renders nothing has no
+/// annotation, so no `/Contents` matches it.
 fn contents_match(f: &Field, contents: Option<&str>) -> bool {
     let multiline = f.field_type == FieldType::Multiline;
     match (rendered(f), contents) {
@@ -3583,7 +3696,6 @@ fn contents_match(f: &Field, contents: Option<&str>) -> bool {
             contents == pades::field_contents(&text, mark, multiline)
                 || contents == pades::legacy_field_contents(&text, mark, multiline)
         }
-        (None, None) => true,
         _ => false,
     }
 }
@@ -4430,7 +4542,43 @@ fn validate_record_identity(
         .signer(&rec.signer_id)
         .ok_or_else(|| format!("unknown slot '{}'", rec.signer_id))?;
     identity.satisfies(&slot.identity_policy)?;
+    // Hosts show the record's copy of the identity: it must be the one the token proves.
+    if rec.idp_email != identity.email
+        || rec.idp_subject != identity.subject
+        || rec.idp_issuer != identity.issuer
+    {
+        return Err("recorded email/subject/issuer do not match the token".into());
+    }
     Ok(identity)
+}
+
+/// Why the audit entry of a signer's revision does not name the verified identity the way the
+/// engine writes it, if it does not: its actor is the verified email, and its details are the
+/// engine's sentence about the verified email and issuer (a decline's reason is the signer's
+/// own text, between the two). The completion certificate prints both.
+fn audit_entry_identity_problem(
+    entry: &AuditEntry,
+    rec: &SignatureRecord,
+    identity: &VerifiedIdentity,
+) -> Option<String> {
+    let name = display_name(identity);
+    let verified = format!("verified as {} via {}", identity.email, identity.issuer);
+    let details_ok = match rec.kind {
+        RecordKind::Signed => {
+            entry.details == format!("{name} signed (revision {}); {verified}", rec.revision)
+        }
+        RecordKind::Declined => {
+            let head = format!("{name} declined to sign");
+            entry.details.starts_with(&head)
+                && entry.details.ends_with(&format!("; {verified}"))
+                && (entry.details.len() == head.len() + verified.len() + 2
+                    || entry.details[head.len()..].starts_with(" ("))
+        }
+    };
+    if entry.actor_name != name || !details_ok {
+        return Some("the audit entry does not name the verified signer".into());
+    }
+    None
 }
 
 /// Re-validate the preparer's ID token offline at preparation time.
@@ -4692,6 +4840,37 @@ pub mod testing {
             redraw,
         )
         .map(|increment| pades::appended(pdf, &increment))
+    }
+
+    /// The problems the verifier finds with the annotations the last revision of `after` (which
+    /// extends `before` by one signer's revision) adds, once `tamper` has changed that list: a
+    /// modified signing client adding annotations the engine never writes, in shapes the
+    /// engine's own writer cannot produce.
+    pub fn added_annotation_problems(
+        before: &[u8],
+        after: &[u8],
+        tamper: &dyn Fn(&Envelope, &mut Vec<AddedAnnotation>),
+    ) -> Vec<String> {
+        let audit = pades::audit_increment(before, after).expect("audit");
+        let env = read_envelope(after).expect("envelope");
+        let rec = env.signatures.last().expect("a signature record").clone();
+        let mut added = audit.added_annotations;
+        tamper(&env, &mut added);
+        check_added_annotations(&env, &rec, &added)
+    }
+
+    /// Seal the last audit entry of `env` again with `key` after a test changed it: what a
+    /// modified signing client, which holds the signer's key, can do to its own entry.
+    pub fn reseal_last_audit_entry(env: &mut Envelope, key: &KeyPair) {
+        let e = env.audit_log.pop().expect("an audit entry");
+        env.append_audit_with_consent(
+            e.action,
+            key,
+            &e.actor_name,
+            &e.details,
+            &e.at,
+            e.esign_consent,
+        );
     }
 
     /// [`sign_malicious`] and [`sign_redrawn`] together: a modified signing client that records
@@ -5197,9 +5376,9 @@ mod tests {
         assert!(!contents_match(&f, Some("Jurgen Muller, Zurich")));
         assert!(!contents_match(&f, Some("Jürgen Müller, Zürich!")));
         assert!(!contents_match(&f, None));
-        // A field with nothing to draw has no annotation text either.
+        // A field with nothing to draw has no annotation at all (review 2026-11-09 C1).
         f.value = None;
-        assert!(contents_match(&f, None));
+        assert!(!contents_match(&f, None));
         assert!(!contents_match(&f, Some("")));
     }
 

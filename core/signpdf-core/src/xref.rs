@@ -506,8 +506,8 @@ fn strict_objects(pdf: &[u8], start: usize, end: usize) -> Result<Vec<Listed>, S
             let Object::Dictionary(d) = &value else {
                 return Err(format!("object {num} has a stream but no dictionary"));
             };
-            let len = match d.get(b"Length") {
-                Ok(Object::Integer(n)) if *n >= 0 => *n as usize,
+            let len = match d.get(b"Length").map(offset_of) {
+                Ok(Ok(n)) => n,
                 _ => return Err(format!("stream of object {num} has no direct /Length")),
             };
             if !lx.at(b"\r\n") && !lx.at(b"\n") {
@@ -557,8 +557,8 @@ pub(crate) fn read_increments(before: &[u8], after: &[u8]) -> Result<Vec<Increme
             ));
         }
         let section = strict_section(after, x)?;
-        let prev = match section.trailer.get(b"Prev") {
-            Ok(Object::Integer(p)) if *p >= 0 => *p as usize,
+        let prev = match section.trailer.get(b"Prev").map(offset_of) {
+            Ok(Ok(p)) => p,
             _ => return Err("a trailer has no /Prev".into()),
         };
         sections.push((x, section));
@@ -676,6 +676,33 @@ pub(crate) fn viewer_xref(
     out
 }
 
+/// The most bytes a cross-reference stream may inflate to (a table of a million objects at
+/// eight bytes a row is 8 MiB).
+pub(crate) const MAX_XREF_STREAM_INFLATED: usize = 32 * 1024 * 1024;
+
+/// A byte offset or length written as a PDF integer.
+///
+/// Checked, never cast with `as`: on 32-bit WebAssembly `as usize` keeps the low 32 bits of a
+/// 64-bit value, so the browser verifier would read an offset native verifiers refuse.
+fn offset_of(o: &Object) -> Result<usize, String> {
+    match o {
+        Object::Integer(n) => {
+            usize::try_from(*n).map_err(|_| format!("offset {n} is out of range"))
+        }
+        _ => Err("not an offset".into()),
+    }
+}
+
+/// Whether `o` holds an indirect reference anywhere inside it.
+fn has_reference(o: &Object) -> bool {
+    match o {
+        Object::Reference(_) => true,
+        Object::Array(a) => a.iter().any(has_reference),
+        Object::Dictionary(d) => d.iter().any(|(_, v)| has_reference(v)),
+        _ => false,
+    }
+}
+
 /// Read one section at `pos` into `out`; return the sections it points to, in the order pdf.js
 /// queues them.
 fn viewer_section(
@@ -686,10 +713,16 @@ fn viewer_section(
 ) -> Result<Vec<usize>, String> {
     let mut lx = Lexer::new(pdf, pos, true);
     lx.skip_ws()?;
-    let as_offset = |o: Result<&Object, lopdf::Error>| match o {
-        Ok(Object::Integer(n)) if *n >= 0 => Some(*n as usize),
-        Ok(Object::Reference((n, _))) => Some(*n as usize),
-        _ => None,
+    // `/Prev` or `/XRefStm`: absent, a number, or (as pdf.js reads it) a reference's number.
+    // Anything else makes readers part ways (pdf.js then scans the whole file), so it is refused.
+    let as_offset = |o: Result<&Object, lopdf::Error>| -> Result<Option<usize>, String> {
+        match o {
+            Err(_) => Ok(None),
+            Ok(Object::Reference((n, _))) => Ok(usize::try_from(*n).ok()),
+            Ok(o) => offset_of(o)
+                .map(Some)
+                .map_err(|_| "a section pointer is not a usable offset".to_string()),
+        }
     };
     if lx.keyword(b"xref") {
         fn int(lx: &mut Lexer<'_>) -> Result<u64, String> {
@@ -702,7 +735,7 @@ fn viewer_section(
             if lx.keyword(b"trailer") {
                 break;
             }
-            let mut first = int(&mut lx)?;
+            let first = int(&mut lx)?;
             let count = int(&mut lx)?;
             for i in 0..count {
                 let offset = int(&mut lx)?;
@@ -715,9 +748,10 @@ fn viewer_section(
                 } else {
                     return Err("bad cross-reference entry".into());
                 };
-                // pdf.js: a subsection starting at 1 whose first entry is free starts at 0.
+                // pdf.js renumbers a subsection starting at 1 whose first entry is free from 0;
+                // PDFium and lopdf read it as written. Readers disagree, so it is refused.
                 if i == 0 && free && first == 1 {
-                    first = 0;
+                    return Err("a subsection starting at 1 begins with a free entry".into());
                 }
                 let num = u32::try_from(first + i).map_err(|_| "object number too large")?;
                 let entry = if free {
@@ -739,8 +773,8 @@ fn viewer_section(
             _ => return Err("the trailer is not a dictionary".into()),
         };
         let mut next = Vec::new();
-        next.extend(as_offset(trailer.get(b"XRefStm")));
-        next.extend(as_offset(trailer.get(b"Prev")));
+        next.extend(as_offset(trailer.get(b"XRefStm"))?);
+        next.extend(as_offset(trailer.get(b"Prev"))?);
         return Ok(next);
     }
     // A cross-reference stream: `N G obj << ... >> stream`.
@@ -759,6 +793,30 @@ fn viewer_section(
     if !lx.keyword(b"stream") || !lx.eol() {
         return Err("bad cross-reference stream".into());
     }
+    // pdf.js queues a cross-reference stream's `/XRefStm` before its `/Prev`; lopdf ignores it.
+    if dict.has(b"XRefStm") {
+        return Err("a cross-reference stream carries /XRefStm".into());
+    }
+    // pdf.js dereferences these keys; lopdf does not (it would decode with no filter, no
+    // predictor, or the default `/Index`). Only direct values are read alike.
+    for key in [&b"Filter"[..], b"DecodeParms", b"Index", b"W", b"Size"] {
+        if dict.get(key).is_ok_and(has_reference) {
+            return Err(format!(
+                "a cross-reference stream's /{} is indirect",
+                String::from_utf8_lossy(key)
+            ));
+        }
+    }
+    let flate = match dict.get(b"Filter") {
+        Err(_) => false,
+        Ok(Object::Name(n)) if n == b"FlateDecode" => true,
+        Ok(Object::Array(a)) if matches!(a.as_slice(), [Object::Name(n)] if n == b"FlateDecode") => {
+            true
+        }
+        Ok(_) => {
+            return Err("a cross-reference stream uses a filter other than /FlateDecode".into())
+        }
+    };
     let len = match dict.get(b"Length") {
         Ok(Object::Integer(n)) => Some(*n),
         Ok(Object::Reference(r)) => length_of(*r),
@@ -776,6 +834,17 @@ fn viewer_section(
         return Err(format!(
             "cross-reference stream {num} does not end at its /Length"
         ));
+    }
+    if flate {
+        // Bound the inflated size before lopdf inflates it without a limit. Other inflate errors
+        // are left to lopdf, which reads the stream as it always has.
+        if let Err(e) =
+            miniz_oxide::inflate::decompress_to_vec_zlib_with_limit(data, MAX_XREF_STREAM_INFLATED)
+        {
+            if e.status == miniz_oxide::inflate::TINFLStatus::HasMoreOutput {
+                return Err("a cross-reference stream inflates past its limit".into());
+            }
+        }
     }
     let content = lopdf::Stream::new(dict.clone(), data.to_vec())
         .decompressed_content()
@@ -796,6 +865,7 @@ fn viewer_section(
     let (w0, w1, w2) = (w0 as usize, w1 as usize, w2 as usize);
     let index = match ints(dict.get(b"Index")) {
         Some(v) => v,
+        None if dict.has(b"Index") => return Err("bad /Index".into()),
         None => vec![
             0,
             dict.get(b"Size")
@@ -837,7 +907,7 @@ fn viewer_section(
             out.put(num, entry);
         }
     }
-    Ok(as_offset(dict.get(b"Prev")).into_iter().collect())
+    Ok(as_offset(dict.get(b"Prev"))?.into_iter().collect())
 }
 
 /// Whether a reader that fetches the object at `offset` finds `num gen obj` there.
@@ -1108,6 +1178,130 @@ mod tests {
         assert_eq!(v.get(5), Some(ViewerEntry::Free));
         // The sample document's own objects are still there, from its first table.
         assert!(matches!(v.get(1), Some(ViewerEntry::InUse { .. })));
+    }
+
+    /// `body` followed by object 40 and a cross-reference stream (object 50) listing it, with
+    /// `extra` in the stream's dictionary and its rows passed through `encode` (which returns the
+    /// stream bytes and any `/Filter` entry).
+    fn with_xref_stream(
+        body: &[u8],
+        extra: &str,
+        encode: impl Fn(Vec<u8>) -> (Vec<u8>, &'static str),
+    ) -> Vec<u8> {
+        let prev = last_startxref(body).unwrap();
+        let mut out = body.to_vec();
+        let at = out.len();
+        out.extend_from_slice(b"40 0 obj\n<< /A 1 >>\nendobj\n");
+        let mut rows = vec![1u8];
+        rows.extend_from_slice(&u32::try_from(at).unwrap().to_be_bytes());
+        rows.extend_from_slice(&[0, 0]);
+        let (data, filter) = encode(rows);
+        let x = out.len();
+        out.extend_from_slice(
+            format!(
+                "50 0 obj\n<< /Type /XRef /Size 100 /W [1 4 2] /Index [40 1] /Root 1 0 R \
+                 /Prev {prev} /Length {}{filter}{extra} >>\nstream\n",
+                data.len()
+            )
+            .as_bytes(),
+        );
+        out.extend_from_slice(&data);
+        out.extend_from_slice(format!("\nendstream\nendobj\nstartxref\n{x}\n%%EOF\n").as_bytes());
+        out
+    }
+
+    fn viewer_of(pdf: &[u8]) -> ViewerXref {
+        viewer_xref(pdf, last_startxref(pdf).unwrap(), &|_| None)
+    }
+
+    #[test]
+    fn a_plain_cross_reference_stream_is_read() {
+        let a = with_xref_stream(&base(), "", |rows| (rows, ""));
+        let v = viewer_of(&a);
+        assert!(v.complete);
+        assert!(matches!(v.get(40), Some(ViewerEntry::InUse { .. })));
+        let a = with_xref_stream(&base(), "", |rows| {
+            (
+                miniz_oxide::deflate::compress_to_vec_zlib(&rows, 6),
+                " /Filter /FlateDecode",
+            )
+        });
+        assert!(viewer_of(&a).complete);
+    }
+
+    /// Review 2026-11-09 B1: pdf.js follows `/XRefStm` before `/Prev` whatever kind of section
+    /// carries it; lopdf ignores it on a cross-reference stream. Readers disagree, so the chain
+    /// cannot be relied on.
+    #[test]
+    fn a_cross_reference_stream_with_xrefstm_is_ambiguous() {
+        let b = base();
+        let prev = last_startxref(&b).unwrap();
+        let a = with_xref_stream(&b, &format!(" /XRefStm {prev}"), |rows| (rows, ""));
+        assert!(!viewer_of(&a).complete);
+    }
+
+    /// Review 2026-11-09 B2: a subsection starting at 1 whose first entry is free is renumbered
+    /// from 0 by pdf.js and read as written by PDFium and lopdf.
+    #[test]
+    fn a_free_subsection_starting_at_one_is_ambiguous() {
+        let b = base();
+        for head in ["0000000000 00001 f ", "0000000000 65535 f "] {
+            let a = with_increment(
+                &b,
+                &[(42, "<< /A 1 >>")],
+                |o| format!("1 2\n{head}\n{head}\n42 1\n{:010} 00000 n \n", o[0].1),
+                "",
+            );
+            assert!(!viewer_of(&a).complete, "{head}");
+        }
+    }
+
+    /// Review 2026-11-09 B3: pdf.js dereferences an indirect `/Index`, `/DecodeParms` or
+    /// `/Filter`; lopdf and this reader used to ignore it and fall back to the default.
+    /// Unusable section pointers are refused rather than skipped.
+    #[test]
+    fn indirect_or_unusable_stream_keys_are_ambiguous() {
+        let b = base();
+        for extra in [
+            " /Index 7 0 R",
+            " /DecodeParms 7 0 R",
+            " /DecodeParms << /Columns 7 0 R >>",
+            " /Prev (12)",
+        ] {
+            // A second /Index or /Prev key replaces the first one in the parsed dictionary.
+            let a = with_xref_stream(&b, extra, |rows| (rows, ""));
+            assert!(!viewer_of(&a).complete, "{extra}");
+        }
+        let a = with_xref_stream(&b, "", |rows| (rows, " /Filter 7 0 R"));
+        assert!(!viewer_of(&a).complete);
+        let a = with_xref_stream(&b, "", |rows| (rows, " /Filter /LZWDecode"));
+        assert!(!viewer_of(&a).complete);
+        let a = with_increment(&b, &[(40, "<< >>")], one_per_line, " /XRefStm -5");
+        assert!(!viewer_of(&a).complete);
+    }
+
+    /// Review 2026-11-09 B5: a cross-reference stream is inflated only up to
+    /// [`MAX_XREF_STREAM_INFLATED`] bytes.
+    #[test]
+    fn a_cross_reference_stream_bomb_is_refused() {
+        let a = with_xref_stream(&base(), "", |mut rows| {
+            rows.resize(MAX_XREF_STREAM_INFLATED + 1, 0);
+            (
+                miniz_oxide::deflate::compress_to_vec_zlib(&rows, 1),
+                " /Filter /FlateDecode",
+            )
+        });
+        assert!(!viewer_of(&a).complete);
+    }
+
+    /// Review 2026-11-09 B4: offsets and lengths are converted with a range check, never `as`.
+    #[test]
+    fn offsets_that_do_not_fit_are_refused() {
+        assert_eq!(offset_of(&Object::Integer(5)), Ok(5));
+        assert!(offset_of(&Object::Integer(-1)).is_err());
+        if usize::BITS < 64 {
+            assert!(offset_of(&Object::Integer((1i64 << 32) + 5)).is_err());
+        }
     }
 
     /// Readers skip whitespace and comments between an entry's offset and `N G obj`; the model

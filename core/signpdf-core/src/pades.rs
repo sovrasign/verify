@@ -992,6 +992,13 @@ fn last_signature_awaiting_timestamp(
     if !last.is_valid() {
         return Err(pades("the last signature is not valid"));
     }
+    // The verifier also requires the CMS in exactly the form SignPDF writes; a timestamp added
+    // to any other would give a document it refuses.
+    if !last.canonical {
+        return Err(pades(
+            "the last signature's CMS is not in SignPDF's canonical form",
+        ));
+    }
     if !last.covers_to_eof {
         return Err(pades(
             "the last signature does not cover the whole file (something was added after it)",
@@ -1125,6 +1132,13 @@ fn increment_signature_awaiting_timestamp(
     })?;
     if !last.is_valid() {
         return Err(pades("the last signature is not valid"));
+    }
+    // The verifier also requires the CMS in exactly the form SignPDF writes; a timestamp added
+    // to any other would give a document it refuses.
+    if !last.canonical {
+        return Err(pades(
+            "the last signature's CMS is not in SignPDF's canonical form",
+        ));
     }
     if last.signature_timestamp.is_some() {
         return Err(pades(

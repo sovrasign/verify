@@ -427,6 +427,14 @@ bytes whose SHA-256 is `source_digest`; the preparer's additions MUST be limited
 document-ID stamp and one signature field; the preparer's token MUST verify at `created_at` and
 be bound (§5.2) to `created_by_pubkey` and `source_digest`; every slot MUST be `pending`, the
 log MUST hold one `prepared` entry and no records; a documents index MUST match the pages (§4.5).
+The prepared terms MUST follow the rules a conforming preparer enforces: a non-empty `title`; at
+least one slot; slot `id`s non-empty and unique, `order` 1 or more, no `public_key` or
+`fingerprint`; field `id`s unique, each field assigned to a known slot, on a page of the source
+and within its visible area, with no `value`; field settings that suit the field's type (§4.4);
+each radio group held by one slot with one `required` setting and at least two distinctly
+labelled options; formulas that read only number inputs of the same or an earlier signer,
+without loops; a usable `service_link` and `verify_at`. A preparer also refuses an expiry
+already past and an identity policy it cannot fill; a verifier does not re-check those.
 
 ### 7.2 Signer revisions
 
@@ -435,7 +443,11 @@ envelope of the revision before it:
 
 1. the prepared terms are unchanged (§4.2);
 2. exactly one pending slot became `signed` or `declined`, bound to this revision's key;
-3. exactly one record and one audit entry were appended; earlier ones are unchanged;
+3. exactly one record and one audit entry were appended; earlier ones are unchanged; the
+   record's `idp_issuer`, `idp_subject` and `idp_email` are the verified token's `iss`, `sub`
+   and `email`, and the entry's `actor_name` is that email and its `details` the reference
+   writer's sentence (`<email> signed (revision <n>); verified as <email> via <iss>`, or
+   `<email> declined to sign[ (<reason>)]; verified as <email> via <iss>`);
 4. only that signer's empty fields were filled (§4.4);
 5. the record's `signed_prefix_len` is the length of the previous revision, and `doc_digest`
    its SHA-256 (`unsigned_insertion` otherwise: something was slipped in between signatures);
@@ -449,7 +461,8 @@ envelope of the revision before it:
 The increment only adds objects. The catalog may only gain an AcroForm, the AcroForm may only
 gain one field (the signer's signature widget, on a page), and pages may only gain annotations.
 The added annotations MUST be exactly the signer's signature widget and read-only texts drawing
-their field values, carrying only the entries the reference writer writes (no action, no
+their field values (every field of the signer that shows something has exactly one, and a
+field that shows nothing has none), carrying only the entries the reference writer writes (no action, no
 transform, no filter, no font but the standard one). Content streams, resources, the page tree,
 and existing annotations or signatures MUST NOT change (`forbidden_change`). The verifier
 redraws each annotation from the envelope and the *verified* identity (email, key code, signing
@@ -510,7 +523,7 @@ A trust store is a JSON object:
 | --- | --- |
 | `issuers` | array of `{issuer, name, jwks_uri?, keys, audiences, requires_trusted_time?, kind?}`; `keys` are JWKs (RFC 7517) that MAY carry `not_before`, `not_after`, `distrusted_after` (RFC 3339) and the informational `first_seen`, `last_seen`; `audiences` are the applications (`aud`) accepted for the issuer, an empty list accepting none; `kind` is `email-code`, `account` or `organization` |
 | `tsa_anchors` | array of base64 DER certificates: the roots of trusted time-stamp authorities |
-| `tsa_distrusted` | OPTIONAL array of `{cert_sha256, distrusted_after, name?}`: a timestamp whose chain holds the certificate with that SHA-256 (hex of its DER) and whose `genTime` is at or after `distrusted_after` (RFC 3339) is **not trusted** (warning `tsa_distrusted`); earlier ones still are. Merging two stores keeps the earlier time |
+| `tsa_distrusted` | OPTIONAL array of `{cert_sha256, distrusted_after, name?}`: a timestamp whose chain holds the certificate with that SHA-256 (hex of its DER) and whose `genTime` is at or after `distrusted_after` (RFC 3339) is **not trusted** (warning `tsa_distrusted`); earlier ones still are. A chain certificate matches when its DER, or its other valid encoding (an ECDSA signature `(r, s)` as `(r, n - s)`), has that SHA-256; a certificate whose outer `signatureAlgorithm` differs from `tbsCertificate.signature` is refused. Merging two stores keeps the earlier time |
 | `allow_insecure_dev_issuer` | MUST be `false` in any list used for real documents |
 | `algorithm_policy` | OPTIONAL, §8.3 |
 

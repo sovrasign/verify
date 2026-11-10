@@ -831,11 +831,18 @@ impl TrustStore {
 
     /// The earliest time (Unix seconds) from which the store distrusts timestamps whose chain
     /// holds the certificate `der`, if it does. An unreadable time fails closed (`i64::MIN`).
+    ///
+    /// The certificate is matched as written and in the other encodings anyone can give it
+    /// without the issuer's key ([`crate::timestamp::certificate_twins`]), so rewriting a
+    /// distrusted certificate does not escape the entry.
     pub fn tsa_distrusted_from(&self, der: &[u8]) -> Option<i64> {
-        let hash = cert_sha256_hex(der);
+        let hashes: Vec<String> = std::iter::once(der.to_vec())
+            .chain(crate::timestamp::certificate_twins(der))
+            .map(|d| cert_sha256_hex(&d))
+            .collect();
         self.tsa_distrusted
             .iter()
-            .filter(|d| d.matches(&hash))
+            .filter(|d| hashes.iter().any(|h| d.matches(h)))
             .map(|d| unix_from_rfc3339(&d.distrusted_after).unwrap_or(i64::MIN))
             .min()
     }

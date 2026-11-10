@@ -340,11 +340,42 @@ fn be_uint(bytes: &[u8]) -> u64 {
 }
 
 /// Convert an ASN.1 GeneralizedTime (`YYYYMMDDHHMMSS[.fff]Z`) into RFC 3339.
+///
+/// RFC 3161 §2.4.2 requires UTC (`Z`) and allows a fraction of a second. Anything else (an
+/// offset, trailing bytes, a non-digit, an impossible date or time) is refused, never read as
+/// UTC; non-ASCII bytes are refused before any slicing.
 fn parse_generalized_time(raw: &[u8]) -> Result<String> {
-    let s = std::str::from_utf8(raw).map_err(|_| ts_err("genTime is not ASCII"))?;
-    if s.len() < 14 || !s.is_char_boundary(14) {
-        return Err(ts_err(format!("unexpected genTime format: {s}")));
+    let bad = || {
+        ts_err(format!(
+            "unexpected genTime format: {}",
+            String::from_utf8_lossy(raw)
+        ))
+    };
+    if !raw.is_ascii() || raw.len() < 15 || !raw[..14].iter().all(u8::is_ascii_digit) {
+        return Err(bad());
     }
+    match &raw[14..] {
+        b"Z" => {}
+        [b'.', frac @ .., b'Z'] if !frac.is_empty() && frac.iter().all(u8::is_ascii_digit) => {}
+        _ => return Err(bad()),
+    }
+    let num = |r: std::ops::Range<usize>| {
+        raw[r]
+            .iter()
+            .fold(0u32, |v, d| v * 10 + u32::from(d - b'0'))
+    };
+    let (month, day, hour, minute, second) =
+        (num(4..6), num(6..8), num(8..10), num(10..12), num(12..14));
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || hour > 23
+        || minute > 59
+        || second > 59
+    {
+        return Err(bad());
+    }
+    // Every byte is ASCII, so these slices are on character boundaries.
+    let s = std::str::from_utf8(raw).map_err(|_| bad())?;
     let (date, time) = (&s[..8], &s[8..14]);
     Ok(format!(
         "{}-{}-{}T{}:{}:{}Z",
@@ -735,6 +766,17 @@ impl RawCert {
     pub(crate) fn parse(der: &[u8]) -> Option<Self> {
         use der::Decode;
         let cert = x509_cert::Certificate::from_der(der).ok()?;
+        // RFC 5280 §4.1.1.2: the outer signatureAlgorithm MUST equal tbsCertificate.signature.
+        // Only the inner one is signed, so anyone could rewrite the outer one and change the
+        // certificate's bytes (and the SHA-256 a distrust entry names) without breaking its
+        // signature: such a certificate is refused.
+        let outer = children(read_tlv(der).ok()?.value).ok()?;
+        let tbs = children(outer.first()?.value).ok()?;
+        // tbsCertificate: [0] version, serialNumber, then signature (the first SEQUENCE).
+        let inner = tbs.iter().find(|t| t.tag == 0x30)?;
+        if outer.get(1)?.der != inner.der {
+            return None;
+        }
         Some(Self {
             cert,
             der: der.to_vec(),
@@ -746,6 +788,42 @@ impl RawCert {
         let outer = read_tlv(&self.der).ok()?;
         children(outer.value).ok()?.first().map(|t| t.der)
     }
+}
+
+/// The other encodings of certificate `der` whose signature verifies without the issuer's key:
+/// for an ECDSA signature `(r, s)`, the same certificate with `(r, n - s)`, which ECDSA accepts
+/// as well. (A different outer signatureAlgorithm is refused by [`RawCert::parse`]; RSA
+/// PKCS #1 v1.5 signatures have one encoding.) A distrust entry names a certificate by its
+/// SHA-256, so it must match these too.
+pub(crate) fn certificate_twins(der: &[u8]) -> Vec<Vec<u8>> {
+    (|| {
+        let outer = children(read_tlv(der).ok()?.value).ok()?;
+        let [tbs, alg, sig] = outer.as_slice() else {
+            return None;
+        };
+        let oid = children(alg.value)
+            .ok()?
+            .first()
+            .filter(|t| t.tag == 0x06)?
+            .value;
+        if oid != const_oid::db::rfc5912::ECDSA_WITH_SHA_256.as_bytes() || sig.tag != 0x03 {
+            return None;
+        }
+        let (&unused, bits) = sig.value.split_first()?;
+        if unused != 0 {
+            return None;
+        }
+        let parsed = p256::ecdsa::Signature::from_der(bits).ok()?;
+        let (r, s) = parsed.split_scalars();
+        let twin = p256::ecdsa::Signature::from_scalars(r.to_bytes(), (-*s).to_bytes()).ok()?;
+        let mut bit_string = vec![0u8];
+        bit_string.extend_from_slice(twin.to_der().as_bytes());
+        let mut body = tbs.der.to_vec();
+        body.extend_from_slice(alg.der);
+        body.extend(tlv(0x03, &bit_string));
+        Some(vec![tlv(0x30, &body)])
+    })()
+    .unwrap_or_default()
 }
 
 /// Verify that `child` was signed by `issuer`'s key.
@@ -1465,5 +1543,38 @@ mod tests {
             "2026-06-23T17:00:12Z"
         );
         assert!(parse_generalized_time(b"2026").is_err());
+    }
+
+    /// Review 2026-11-09 E2: a genTime with a multi-byte character used to panic on a slice
+    /// that cut through it, and anything after the 14 digits (an offset, garbage) was ignored
+    /// and read as UTC.
+    #[test]
+    fn generalized_time_is_strict_ascii_utc() {
+        for bad in [
+            &b"202\xc2\xa0606170012"[..],
+            b"202\xc2\xa0606170012Z",
+            b"2026062317001\xc2\xa0Z",
+            b"20260623170012+0500",
+            b"20260623170012",
+            b"20260623170012Zjunk",
+            b"20260623170012.Z",
+            b"20260623170012.12a3Z",
+            b"2026O623170012Z",
+            b"20261323170012Z",
+            b"20260632170012Z",
+            b"20260623250012Z",
+            b"20260623176012Z",
+            b"20260623170060Z",
+        ] {
+            let got = std::panic::catch_unwind(|| parse_generalized_time(bad));
+            match got {
+                Ok(r) => assert!(
+                    r.is_err(),
+                    "{:?} was accepted",
+                    String::from_utf8_lossy(bad)
+                ),
+                Err(_) => panic!("{:?} panicked", String::from_utf8_lossy(bad)),
+            }
+        }
     }
 }

@@ -307,3 +307,100 @@ fn a_distrusted_stamp_asks_for_no_revocation_evidence() {
         .unwrap()
         .is_empty());
 }
+
+/// `(tag, header length, content length)` of the DER element at the start of `b`.
+fn der_head(b: &[u8]) -> (u8, usize, usize) {
+    let (tag, first) = (b[0], b[1]);
+    if first < 0x80 {
+        return (tag, 2, usize::from(first));
+    }
+    let n = usize::from(first & 0x7f);
+    let len = b[2..2 + n]
+        .iter()
+        .fold(0usize, |v, x| v << 8 | usize::from(*x));
+    (tag, 2 + n, len)
+}
+
+fn der(tag: u8, content: &[u8]) -> Vec<u8> {
+    let mut out = vec![tag];
+    match content.len() {
+        n if n < 0x80 => out.push(n as u8),
+        n if n < 0x100 => out.extend([0x81, n as u8]),
+        n => out.extend([0x82, (n >> 8) as u8, n as u8]),
+    }
+    out.extend_from_slice(content);
+    out
+}
+
+/// The three parts of a certificate: tbsCertificate, signatureAlgorithm, signatureValue.
+fn cert_parts(cert: &[u8]) -> [Vec<u8>; 3] {
+    let (_, h, _) = der_head(cert);
+    let mut rest = &cert[h..];
+    let mut parts = Vec::new();
+    for _ in 0..3 {
+        let (_, h, l) = der_head(rest);
+        parts.push(rest[..h + l].to_vec());
+        rest = &rest[h + l..];
+    }
+    parts.try_into().unwrap()
+}
+
+/// `cert` with its outer (unsigned) signatureAlgorithm given a NULL parameter.
+fn with_outer_algorithm_parameter(cert: &[u8]) -> Vec<u8> {
+    let [tbs, alg, sig] = cert_parts(cert);
+    let (_, h, _) = der_head(&alg);
+    let mut params = alg[h..].to_vec();
+    params.extend([0x05, 0x00]);
+    der(0x30, &[tbs, der(0x30, &params), sig].concat())
+}
+
+/// `cert` with its ECDSA signature (r, s) rewritten as (r, n - s), which verifies as well.
+fn with_negated_s(cert: &[u8]) -> Vec<u8> {
+    use p256::ecdsa::Signature;
+    let [tbs, alg, sig] = cert_parts(cert);
+    let (_, h, _) = der_head(&sig);
+    let parsed = Signature::from_der(&sig[h + 1..]).unwrap();
+    let (r, s) = parsed.split_scalars();
+    let twin = Signature::from_scalars(r.to_bytes(), (-*s).to_bytes()).unwrap();
+    let mut bits = vec![0u8];
+    bits.extend_from_slice(twin.to_der().as_bytes());
+    der(0x30, &[tbs, alg, der(0x03, &bits)].concat())
+}
+
+/// Review 2026-11-09 E1: the issuer's signature covers only the tbsCertificate, so the bytes
+/// around it (the outer signatureAlgorithm, the ECDSA signature's `s`) can be changed by anyone
+/// without breaking the chain. A distrusted certificate rewritten that way is still distrusted.
+#[test]
+fn a_distrusted_certificate_rewritten_outside_its_signature_is_still_distrusted() {
+    let root = TestCa::new("SignPDF Test TSA Root");
+    let inter = root.issue_subordinate("SignPDF Test TSA Issuing CA", true);
+    let original = inter.cert_der();
+    let g = now_unix() + 60;
+    let done = free_completed();
+    let mut store = trust_requiring_time(&root.cert_der());
+    store
+        .distrust_tsa(&cert_sha256_hex(&original), &rfc3339(g - 3600), None)
+        .unwrap();
+    let honest = inter
+        .issue_tsa("SignPDF Test TSA")
+        .with_intermediate(&original);
+    let report = verify(&stamped_at(&done, &honest, g), &store).unwrap();
+    assert!(!report.valid, "the distrusted intermediate as issued");
+    for (name, rewritten) in [
+        (
+            "outer algorithm parameter",
+            with_outer_algorithm_parameter(&original),
+        ),
+        ("negated s", with_negated_s(&original)),
+    ] {
+        assert_ne!(cert_sha256_hex(&rewritten), cert_sha256_hex(&original));
+        let tsa = inter
+            .issue_tsa("SignPDF Test TSA")
+            .with_intermediate(&rewritten);
+        let report = verify(&stamped_at(&done, &tsa, g), &store).unwrap();
+        assert!(
+            !report.valid,
+            "{name}: the rewritten intermediate escaped the distrust"
+        );
+    }
+}

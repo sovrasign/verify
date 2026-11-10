@@ -437,7 +437,10 @@ impl Parser<'_> {
                  not supported)",
             );
         }
-        if matches!(atom, Node::Empty) {
+        // A repeat of something that compiles to nothing (`()`, `()()`, `a{0}`) or that may not
+        // occur (`{0}`) matches only the empty string: it is `Empty`. Otherwise its size would be
+        // 0 at every level, and `compile` would loop `min` times per level unchecked.
+        if atom.size() == 0 || max == Some(0) {
             return Ok(Node::Empty);
         }
         Ok(Node::Repeat {
@@ -606,6 +609,33 @@ mod tests {
         Pattern::new(p)
             .unwrap_or_else(|e| panic!("{p}: {e}"))
             .is_match(v)
+    }
+
+    /// Review 2026-11-09 I1: a repeat around something that compiles to nothing (`a{0}`, `()()`)
+    /// reported size 0 at every level, so nested `{1000}` counts passed the size check and
+    /// `compile` looped 1000^k times (three levels took seconds, four more than an hour).
+    #[test]
+    fn nested_repeats_of_nothing_compile_at_once() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            for p in [
+                "((((((a{0}){1000}){1000}){1000}){1000}){1000}){1000}",
+                "(((((()()){1000}){1000}){1000}){1000}){1000}",
+                "((((a{0,0}b{0}){999}){999}){999})x",
+            ] {
+                let _ = tx.send((p, Pattern::new(p).map(|pat| pat.is_match("x"))));
+            }
+        });
+        for _ in 0..3 {
+            let (p, got) = rx
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .expect("a pattern took more than 5 seconds to compile");
+            // Each is the empty pattern (or `x`), so it compiles to a tiny program.
+            assert!(got.is_ok(), "{p}: {got:?}");
+        }
+        assert!(matches("a{0}b", "b"));
+        assert!(!matches("a{0}b", "ab"));
+        assert!(matches("(()()){5}x", "x"));
     }
 
     #[test]

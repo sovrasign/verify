@@ -62,7 +62,16 @@ headline `valid = integrity_ok && identities_trusted`.
    `created_by_pubkey`; the source bytes hash to `source_digest`; the preparer's additions are
    limited to the document-id stamp and one signature field; the preparer's ID token verifies
    at preparation time and is bound to their key and the source digest. A documents index, when
-   there is one, covers the source's pages in order (see "Documents index" below).
+   there is one, covers the source's pages in order (see "Documents index" below). The prepared
+   terms follow the rules `prepare` enforces, checked again by the verifier because a modified
+   preparing client could write anything (`check_prepared_terms`): a title and at least one
+   slot, unique non-empty slot ids with 1-based orders and no key bound yet, unique field ids
+   on known slots and on the visible part of the source's pages, no value filled in, field
+   settings that suit their types, radio groups held by one signer, formulas that read only the
+   same or earlier signers' inputs, and a usable service link and 'verify at' address. (Two
+   slots with one id would let one signer fill both, the second under the first's identity
+   policy.) Rules of the preparing build and moment (a policy this build can fill, an expiry
+   still ahead) are checked when preparing only.
 4. **Every later revision is exactly one participant's action**, replayed against its
    predecessor:
    - the envelope's prepared terms (title, documents index, slots and their identity policies,
@@ -70,7 +79,10 @@ headline `valid = integrity_ok && identities_trusted`.
      included;
    - exactly one pending slot became signed/declined, bound to this revision's signing key;
    - exactly one signature record and one audit entry were appended, and earlier ones are
-     unchanged;
+     unchanged; the record's copy of the identity (`idp_email`, `idp_subject`, `idp_issuer`)
+     is what the verified token says, and the audit entry names the verified email as its actor
+     and in its details, as the engine writes them (hosts and the completion certificate show
+     both);
    - only that signer's empty fields were filled (a decline fills none), and their answers
      follow the field rules: every date is written `YYYY-MM-DD`, and every *date signed* field
      holds the signer's local date at signing (§4, "Local dates");
@@ -117,8 +129,20 @@ headline `valid = integrity_ok && identities_trusted`.
      `null`, so filling it later would add to what they show. The engine numbers its own
      objects above every number the document lists or refers to. See
      [`SECURITY_REVIEW_2026-10-27.md`](SECURITY_REVIEW_2026-10-27.md), findings 1, 2 and 4.
-   - **what the added annotations draw is what the engine draws.** The verifier redraws each
-     field value from the envelope, and the signature box from the *verified* identity (email,
+
+     The previous revision's chain is read the way pdf.js reads it (`xref::viewer_xref`), and
+     where readers part ways it is marked incomplete, so that no object it defines may be
+     rewritten: a cross-reference stream carrying `/XRefStm` (pdf.js follows it, lopdf ignores
+     it), a subsection starting at 1 whose first entry is free (pdf.js renumbers it from 0,
+     PDFium and lopdf do not), an indirect `/Index`, `/W`, `/Size`, `/Filter` or `/DecodeParms`
+     (pdf.js dereferences it, lopdf falls back to the default), a filter other than
+     `/FlateDecode`, or a `/Prev` or `/XRefStm` that is not a usable offset. A cross-reference
+     stream inflates to 32 MiB at most, and offsets are converted with a range check, never
+     truncated (the browser verifier runs on 32-bit WebAssembly).
+   - **what the added annotations draw is what the engine draws.** Every value a signer records
+     must be drawn, and only a field that shows something has a text annotation (one on a field
+     that shows nothing would draw an appearance nothing is compared with). The verifier redraws
+     each field value from the envelope, and the signature box from the *verified* identity (email,
      key code, signing time, provider), and compares the content streams byte for byte. An
      annotation may carry only the entries the engine writes: no action, no transform, no
      filter, and no font but the standard one. A signature without a box draws nothing. The
@@ -139,7 +163,9 @@ headline `valid = integrity_ok && identities_trusted`.
      prepared terms, when there is one, and nothing else.
    - **text and multi-line fields with checks** (schema version 8) hold either nothing or the
      canonical form of a value that has the field's sealed `value_format` (email, phone, amount,
-     postal code, IBAN, US SSN or EIN, or a custom pattern matched in linear time) and is within
+     postal code, IBAN, US SSN or EIN, or a custom pattern matched in linear time, compiled to a
+     bounded program: a repeat of something that matches only the empty string is the empty
+     pattern, so nested counts cannot multiply the work) and is within
      its `length` (`FieldCheck::holds`); US identifiers are drawn masked (the envelope keeps the
      whole value: masking hides it from a reader of the page, not from someone who opens the
      file). The owner's `check_message` is a sealed term that never decides validity.
@@ -264,7 +290,8 @@ the signature inside the window (§4, "Trusted time for key windows").
   saved before this rule are upgraded when loaded. `signpdf trust add-audience` trusts another
   application, such as an organization's own registration: do that only for an application that
   runs the SignPDF signing ceremony, because any other one could sign as its users.
-- **Who a signature names.** Always the email address the provider verified. An account whose
+- **Who a signature names.** Always the email address the provider verified (the record's and
+  the audit entry's copies are checked against it, §2). An account whose
   email the provider did not verify (or that has none) can neither prepare nor sign, and the
   verifier rejects such a record. The token's `name` claim is a profile name its holder types;
   it is never shown as the signer.
@@ -354,7 +381,13 @@ still count. Anchors are roots that many authorities share, so this distrusts on
 without the others, and only from a time. `genTime` is the authority's own claim: a thief with
 the key can still date a token earlier, so `distrusted_after` is the earliest time the key may
 have been exposed, and a hosted service re-stamps the documents whose trusted time came from the
-authority after it. Merging stores keeps the earlier time.
+authority after it. Merging stores keeps the earlier time. The issuer signs only a
+certificate's `tbsCertificate`, so anyone can change the bytes around it without breaking the
+chain: a certificate whose outer `signatureAlgorithm` differs from the signed one is refused
+(RFC 5280 §4.1.1.2), and an entry also matches the certificate's other valid encoding, an ECDSA
+signature `(r, s)` written as `(r, n − s)` (`timestamp::certificate_twins`). A token's
+`genTime` must be ASCII digits forming a valid date and time, with an optional fraction and
+`Z` (UTC): an offset or trailing bytes are refused, never read as UTC.
 
 Unsigned or untrusted timestamps are reported but **never used as a clock**. The legacy
 `timestamp_token` over the pre-signing document only proves when the document existed, so it is
@@ -594,8 +627,12 @@ finding codes a verifier must give it (`core/signpdf-core/tests/attack/`, checke
 | Forged timestamp reviving an expired token | TSA signature + chain + anchor | `forged_signature_timestamp_is_not_trusted`, `untrusted_timestamp_is_never_used_as_a_clock` |
 | A "TSA" certified by an end-entity certificate under a trusted anchor (backdated trusted time) | CA constraints on every issuer; timestamping EKU alone and critical; ESS attribute checked; only a CA delegates OCSP | `tsa_ca_checks::*`, `timestamp::tests::the_ess_attribute_must_name_the_signing_certificate` |
 | A change viewers see but the audit does not, through an increment's cross-reference (an object listed twice, a free entry, an ambiguous earlier definition, a second copy lopdf reads instead) | each increment's cross-reference read from its bytes, in SignPDF's form only | `xref_differential::*`, `xref::tests` |
+| An earlier revision whose chain viewers and lopdf read differently (`/XRefStm` on a cross-reference stream, a free subsection starting at 1, an indirect `/Index` or `/DecodeParms`, an inflate bomb) | the chain is marked incomplete and none of its objects may be rewritten | `xref::tests::a_cross_reference_stream_with_xrefstm_is_ambiguous`, `…a_free_subsection_starting_at_one_is_ambiguous`, `…indirect_or_unusable_stream_keys_are_ambiguous`, `…a_cross_reference_stream_bomb_is_refused` |
 | A reference the earlier revision left undefined, filled by a later revision | such numbers may not be defined later; the engine numbers above them | `dangling_ref::*` |
 | A signer's revision adding a form field other than its signature | the new field must be the added signature widget | `form_field::*` |
+| A signer records a value the page does not show, or adds a text annotation without `/Contents` to a field that shows nothing | every recorded value must be drawn; a field that shows nothing has no annotation | `review_2026_11_09::c1_a_recorded_value_must_be_shown_on_the_page`, `…c1_no_text_annotation_on_a_field_that_shows_nothing` |
+| A modified preparing client writes terms `prepare` refuses (two slots with one id, a pre-filled value, a formula reading a later signer's field, a slot bound to a key) | the verifier checks the prepared terms with the rules `prepare` uses | `review_2026_11_09::c2_prepared_terms_are_checked_when_verifying`, `…c2_one_signer_cannot_fill_two_slots_with_one_id` |
+| A signer writes someone else's email or subject into its record, or another actor into its audit entry | the copies must match the verified token | `review_2026_11_09::c3_the_recorded_identity_is_the_verified_one` |
 | A signer changes the signature-timestamp policy (to add a timestamp the envelope does not take, or to drop a required one) | the policy is a prepared term | `timestamp_policy::a_signer_cannot_change_the_policy` |
 | A host timestamps an envelope whose policy is `none` | every engine step refuses (core, FFI, WASM); a timestamp forced in with low-level calls is reported | `timestamp_policy::no_signature_timestamps_means_none_is_made_or_added`, `…a_timestamp_forced_onto_an_envelope_that_takes_none_is_reported`, `ffi_an_envelope_without_timestamps_is_never_timestamped` |
 | A modified client writes another date in a *date signed* field, or rewrites the UTC offset | the verifier recomputes the local date from `signed_at` and the recorded offset, and checks the offset's form | `local_dates::a_date_signed_field_with_another_date_fails_verification`, `…a_rewritten_utc_offset_fails_verification` |
@@ -614,6 +651,9 @@ finding codes a verifier must give it (`core/signpdf-core/tests/attack/`, checke
 | An identity provider's token signed with a key or algorithm that no longer proves anything | the trust list's algorithm policy: minimum key size, end dates, and only a trusted timestamp from before an end date keeps older evidence | `algorithm_policy::a_short_rsa_key_is_refused`, `…past_its_end_an_rsa_token_counts_only_under_an_earlier_timestamp`, `algorithms::tests::*` |
 | A timestamp whose algorithm has ended, used to date or rescue anything | it counts only if a later timestamp that counts covers it; judged from the end of the file back | `algorithm_policy::a_timestamp_relying_on_an_ended_algorithm_is_no_evidence`, `workflow::tests::a_later_timestamp_keeps_one_whose_algorithm_has_ended` |
 | A timestamp authority's key stolen: tokens dated at will | `tsa_distrusted` in the trust store: from `distrusted_after` its timestamps are not trusted time, other authorities under the same root still count | `tsa_distrust::a_stamp_before_the_distrust_counts_and_one_at_or_after_it_does_not`, `…one_authority_is_distrusted_without_the_others_under_the_same_root`, the shared vectors `spec/vectors/tsa-distrust/` |
+| A distrusted certificate rewritten outside its signature (outer `signatureAlgorithm`, ECDSA `s` as `n − s`) so its SHA-256 no longer matches | the outer algorithm must equal the signed one; the distrust also matches the ECDSA twin | `tsa_distrust::a_distrusted_certificate_rewritten_outside_its_signature_is_still_distrusted` |
+| A malformed `genTime` (a multi-byte character, an offset, trailing bytes) crashing the verifier or read as UTC | strict ASCII `YYYYMMDDHHMMSS[.f]Z` with a valid date and time | `timestamp::tests::generalized_time_is_strict_ascii_utc` |
+| A custom field pattern that takes hours to compile (`((a{0}){1000}){1000}…`) | a repeat of what matches only the empty string is the empty pattern; the program-size limit then holds | `pattern::tests::nested_repeats_of_nothing_compile_at_once` |
 | A trust-list key stolen: a forged list with a huge `sequence` that would shut real lists out | the key-chain rule (`trust_list`): the first real list signed by the next key in the pinned chain wins over any sequence, the old key's lists are then refused, and only the chain's last key can pre-commit more keys | `trust_list_rotation::every_vector_case_holds` (`spec/vectors/trust-list-rotation.json`, also run by the app, the verifier module and the hosted service's clients) |
 | Token lifting/replay to another key or document | nonce binding | `ffi_token_bound_to_one_document_cannot_sign_another` |
 | Crash on hostile input | bounds checks, `catch_unwind` at the FFI | `ffi_garbage_input_never_crashes_the_host`, `robustness.rs`, `core/fuzz` |

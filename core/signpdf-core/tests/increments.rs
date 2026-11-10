@@ -344,3 +344,63 @@ fn mutated_increments_never_panic() {
         let _ = increment_after(&appended(&doc, &m), &Head::of(&doc));
     }
 }
+
+/// The `/Contents` hex of the last signature in `increment`, as a byte range.
+fn contents_gap(increment: &[u8]) -> std::ops::Range<usize> {
+    let at = increment
+        .windows(11)
+        .rposition(|w| w == b"/Contents <")
+        .expect("a signature's /Contents")
+        + 11;
+    let len = increment[at..].iter().position(|b| *b == b'>').unwrap();
+    at..at + len
+}
+
+/// Found by `mutated_increments_never_panic` (a run in a few failed): a change in the
+/// certificate inside the signature's CMS, outside its key, leaves the signature valid and the
+/// CMS readable, so embedding a timestamp accepted it, and the verifier then refused the result
+/// (the CMS is no longer SignPDF's exact form: the signed ESS attribute names another
+/// certificate). Embedding must refuse what the verifier refuses.
+#[test]
+fn a_timestamp_is_not_embedded_into_a_cms_the_verifier_refuses() {
+    use der::{Decode, Encode};
+    let tsa = TestTsa::new();
+    let doc = prepared();
+    let (key, req) = signer_request("alice@example.com", &doc, "s1");
+    let inc = sign_for_timestamp_increment(&doc, &key, &req).unwrap();
+    let digest = increment_signature_timestamp_digest(&doc, &inc).unwrap();
+    let response = tsa.respond(&build_request(&digest)).unwrap();
+    let token = parse_response(&response, &digest).unwrap().token_der;
+    // The honest increment takes it, for reference.
+    let stamped = embed_increment_signature_timestamp(&doc, &inc, &token).unwrap();
+    assert!(
+        verify(&appended(&doc, &stamped), &trust_with(&tsa))
+            .unwrap()
+            .integrity_ok
+    );
+
+    let gap = contents_gap(&inc);
+    let mut cms = hex::decode(&inc[gap.clone()]).unwrap();
+    let mut reader = der::SliceReader::new(&cms).unwrap();
+    let ci = <cms::content_info::ContentInfo as der::Decode>::decode(&mut reader).unwrap();
+    let sd: cms::signed_data::SignedData = ci.content.decode_as().unwrap();
+    let cert = match sd.certificates.unwrap().0.iter().next().unwrap() {
+        cms::cert::CertificateChoices::Certificate(c) => c.to_der().unwrap(),
+        _ => panic!("a certificate"),
+    };
+    let at = cms.windows(cert.len()).position(|w| w == cert).unwrap();
+    // The last byte of the certificate's own signature value: not its key.
+    cms[at + cert.len() - 1] ^= 1;
+    assert!(x509_cert::Certificate::from_der(&cms[at..at + cert.len()]).is_ok());
+    let mut mutated = inc.clone();
+    mutated[gap].copy_from_slice(hex::encode(&cms).as_bytes());
+
+    if let Ok(stamped) = embed_increment_signature_timestamp(&doc, &mutated, &token) {
+        let report = verify(&appended(&doc, &stamped), &trust_with(&tsa)).unwrap();
+        assert!(
+            report.integrity_ok,
+            "a timestamp was embedded into a CMS the verifier refuses: {:?}",
+            report.messages
+        );
+    }
+}
