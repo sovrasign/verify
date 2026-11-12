@@ -42,6 +42,7 @@
         <label class="button secondary"><span data-i18n="load_trust">Load trust.json</span><input type="file" id="trust-file" accept="application/json,.json" hidden></label>
         <button id="export-trust" type="button" class="secondary" data-i18n="export_trust">Export trust.json</button>
       </div>
+      <p id="trust-list-status" class="muted" role="status" hidden></p>
       <p id="trust-status" class="muted" role="status"></p>
     </section>
 
@@ -68,9 +69,11 @@
 
   <footer class="muted" data-i18n="footer">
     Sovrasign Verify is open source; its signing engine runs in your browser, compiled to WebAssembly. Verification is offline; the only
-    network requests are the optional provider-key fetches you trigger above.
+    network requests are the signed trust list this page follows, if it follows one, and the
+    optional provider-key fetches you trigger above.
   </footer>
   <script src="verifier-i18n.js"></script>
+  <script src="trust-list.js"></script>
   <script src="verifier.js"></script>
 </body>
 </html>

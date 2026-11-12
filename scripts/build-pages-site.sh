@@ -5,8 +5,8 @@
 #   scripts/build-pages-site.sh OUT                 build the WebAssembly reproducibly, then OUT
 #   scripts/build-pages-site.sh OUT --wasm FILE     use an already built verifier module
 #
-# OUT receives the page (index.html with integrity hashes, verifier-i18n.js, verifier.js, verifier.css,
-# signpdf_wasm.wasm, integrity.json), the format specification and test vectors as a tarball,
+# OUT receives the page (index.html with integrity hashes, verifier-i18n.js, trust-list.js,
+# verifier.js, verifier.css, signpdf_wasm.wasm, integrity.json), the format specification and test vectors as a tarball,
 # SHA256SUMS over every file, and BUILD.md: the commit, the toolchain, SOURCE_DATE_EPOCH and the
 # commands that rebuild the same bytes. Anyone can rebuild the module with
 # `scripts/build-wasm-reproducible.sh --container --check SHA256SUMS-wasm` and compare.
@@ -34,7 +34,28 @@ fi
 
 rm -rf "$out"
 mkdir -p "$out"
-cp web/verifier/index.template.html web/verifier/verifier-i18n.js web/verifier/verifier.js web/verifier/verifier.css "$out/"
+cp web/verifier/index.template.html web/verifier/verifier-i18n.js web/verifier/trust-list.js web/verifier/verifier.js web/verifier/verifier.css "$out/"
+# The signed trust list the page follows (spec/envelope-format.md §9.2): with TRUST_LIST_URL set
+# (an https address of a publisher's trust.json), trust-list.js pins the keys of
+# tools/archive/trust-list-keys.json, the chain the trust-list archive checks lists with. The pins
+# are part of the page and of its integrity hashes. Unset: the engine's own trust-list.js, which
+# follows no list.
+if [ -n "${TRUST_LIST_URL:-}" ]; then
+  TRUST_LIST_URL=$TRUST_LIST_URL node -e '
+    const fs = require("fs");
+    const url = process.env.TRUST_LIST_URL;
+    if (!/^https:\/\/[A-Za-z0-9.-]+(:\d+)?\/[\w.~\/-]*$/.test(url) || url.endsWith(".jws")) throw new Error(`TRUST_LIST_URL: not an https address of trust.json: ${url}`);
+    const keys = JSON.parse(fs.readFileSync("tools/archive/trust-list-keys.json", "utf8")).keys;
+    if (!Array.isArray(keys) || keys.length === 0) throw new Error("TRUST_LIST_URL is set but tools/archive/trust-list-keys.json pins no key");
+    for (const k of keys) {
+      if (k.kty !== "EC" || k.crv !== "P-256" || "d" in k || !k.x || !k.y) throw new Error("trust-list-keys.json: public P-256 JWKs only");
+    }
+    const pins = keys.map((k) => ({ kty: k.kty, crv: k.crv, x: k.x, y: k.y, ...(k.kid ? { kid: k.kid } : {}) }));
+    const head = fs.readFileSync("web/verifier/trust-list.js", "utf8").split("globalThis.SignpdfTrustList")[0];
+    fs.writeFileSync(process.argv[1], `${head}globalThis.SignpdfTrustList = ${JSON.stringify({ url, keys: pins })};` + String.fromCharCode(10));
+  ' "$out/trust-list.js"
+  echo "trust list: $TRUST_LIST_URL ($(grep -o '"x":' "$out/trust-list.js" | wc -l) pinned key(s))" >&2
+fi
 cp "$wasm" "$out/signpdf_wasm.wasm"
 node scripts/sri.mjs "$out" >/dev/null
 rm "$out/index.template.html"

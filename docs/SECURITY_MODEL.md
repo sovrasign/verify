@@ -678,7 +678,10 @@ finding codes a verifier must give it (`core/signpdf-core/tests/attack/`, checke
   account, can sign as its users. Pinning prevents forgery by *others* but not by the provider.
 - **Key distribution.** A verifier is only as good as its `trust.json`. Keys fetched over TLS at
   refresh time are trusted from then on (trust-on-refresh). Documents signed with a key that a
-  verifier never saw before it was rotated out report `unknown-key`.
+  verifier never saw before it was rotated out report `unknown-key`, unless the verifier follows
+  a publisher's signed trust list that recorded the key while it was live (spec §9.2: the apps
+  built for a publisher, and the browser verifier built with `TRUST_LIST_URL`). Such a list is
+  believed only under the publisher's pinned key chain; keys it never recorded stay unknown.
 - **Device clock.** Without a trusted signature timestamp, "token valid at signing time" relies
   on the signer's clock (bounded below by the token's `iat`). Envelopes whose policy is
   `signature_timestamps = none` rely on it by design (§4). Their trusted bound is the document

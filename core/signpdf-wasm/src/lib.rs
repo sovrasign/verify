@@ -422,6 +422,33 @@ pub unsafe extern "C" fn signpdf_trust_add_jwks(
     })())
 }
 
+/// Merge the trust store `other` into the trust store `base` (`TrustStore::merge`): issuers,
+/// keys, audiences and TSA anchors are united, and key windows, distrust and issuer kinds only
+/// ever narrow, so `base`'s decisions stand. The page puts the keys it holds itself over the
+/// signed trust list it follows. The insecure dev flag is never turned on by merging. Result: the
+/// merged trust store JSON.
+///
+/// # Safety
+/// Pointer/length pairs must describe readable memory.
+#[no_mangle]
+pub unsafe extern "C" fn signpdf_trust_merge(
+    base_ptr: *const u8,
+    base_len: usize,
+    other_ptr: *const u8,
+    other_len: usize,
+) -> i32 {
+    let base = bytes(base_ptr, base_len);
+    let other = bytes(other_ptr, other_len);
+    finish((|| {
+        let mut store = trust_from(base)?;
+        store.merge(&trust_from(other)?);
+        store
+            .to_json()
+            .map(String::into_bytes)
+            .map_err(|e| (ERR_ENGINE, e.to_string()))
+    })())
+}
+
 /// Take a signed trust list under the key-chain accept rule (`signpdf_core::trust_list`): the
 /// input `client` is `{"pins": [public P-256 JWKs, the key in use first], "state": {...}}` (the
 /// `state` a previous call returned, or absent), then the list's exact bytes and its detached
@@ -546,6 +573,33 @@ mod tests {
         assert_eq!(code, OK);
         let store: TrustStore = serde_json::from_slice(&result()).unwrap();
         assert_eq!(store.issuers.len(), 4);
+    }
+
+    #[test]
+    fn merging_keeps_the_keys_of_both_stores_and_the_narrower_window() {
+        // A list that still pins a key a provider no longer publishes, with an end, and the page's
+        // own store holding the same key without one and a key of its own.
+        let list = br#"{"type":"sovrasign-trust-list","schema":2,"sequence":3,"issuers":[{"issuer":"https://idp.test","name":"IdP","audiences":["app"],"keys":[{"kty":"EC","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0","kid":"old","not_after":"2030-01-01T00:00:00Z"}]}],"tsa_anchors":[]}"#;
+        let own = br#"{"issuers":[{"issuer":"https://idp.test","name":"IdP","audiences":["app"],"keys":[{"kty":"EC","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0","kid":"old"},{"kty":"EC","crv":"P-256","x":"gI0GAILBdu7T53akrFmMyGcsF3n5dO7MmwNBHKW5SV0","y":"SLW_xSffzlPWrHEVI30DHM_4egVwt3NQqeUD7nMFpps","kid":"new"}]}],"tsa_anchors":[],"allow_insecure_dev_issuer":true}"#;
+        let code =
+            unsafe { signpdf_trust_merge(list.as_ptr(), list.len(), own.as_ptr(), own.len()) };
+        assert_eq!(code, OK, "{}", String::from_utf8_lossy(&result()));
+        let merged: serde_json::Value = serde_json::from_slice(&result()).unwrap();
+        let keys = merged["issuers"][0]["keys"].as_array().unwrap();
+        assert_eq!(keys.len(), 2, "{merged}");
+        assert_eq!(
+            keys[0]["not_after"], "2030-01-01T00:00:00Z",
+            "the list's end stands"
+        );
+        assert_eq!(
+            merged["allow_insecure_dev_issuer"], false,
+            "never turned on by merging"
+        );
+        // Garbage is refused, not merged.
+        let bad = b"{";
+        let code =
+            unsafe { signpdf_trust_merge(list.as_ptr(), list.len(), bad.as_ptr(), bad.len()) };
+        assert_eq!(code, ERR_DECODE);
     }
 
     #[test]

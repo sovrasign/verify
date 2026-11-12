@@ -11,6 +11,10 @@
 # - `archive` keeps that build for good: a GitHub release `verifier-<date>-<commit>` holding the
 #   site and its hashes, and a Software Heritage "save code now" request for the repository.
 #
+# With the repository variable TRUST_LIST_URL set, the page follows that signed trust list, pinned
+# to the keys of tools/archive/trust-list-keys.json; a change of either rebuilds it (run the
+# workflow by hand after changing the variable).
+#
 # Everything is skipped while the repository is private: nothing is made public before the
 # repository is. Then turn on Pages with "GitHub Actions" as the
 # source (Settings > Pages) and the job runs on the next push.
@@ -24,6 +28,7 @@ on:
       - "web/verifier/**"
       - "spec/**"
       - "scripts/build-pages-site.sh"
+      - "tools/archive/trust-list-keys.json"
       - "scripts/build-wasm-reproducible.sh"
       - "scripts/sri.mjs"
       - "scripts/wasm-*"
@@ -49,6 +54,10 @@ jobs:
         with:
           node-version: "22"
       - name: scripts/build-pages-site.sh
+        env:
+          # The signed trust list the page follows (trust-list.js): the address the trust-list
+          # archive reads, checked with the same pinned keys. Unset: the page follows none.
+          TRUST_LIST_URL: ${{ vars.TRUST_LIST_URL }}
         run: bash scripts/build-pages-site.sh site
       - name: Hashes
         run: |

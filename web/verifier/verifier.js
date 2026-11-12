@@ -4,15 +4,26 @@
 // scripts/build-verifier.sh) and drives its small C-style ABI. Every string in a verification
 // report comes from the (attacker-controlled) PDF, so it is rendered with textContent only —
 // never innerHTML.
+//
+// The trust store it verifies with is its own (the well-known providers and the keys fetched or
+// loaded in this browser) merged over the signed trust list it follows, when the build names one
+// (trust-list.js): a publisher's list of every provider key it has seen, so a document signed
+// with a key the provider no longer publishes still shows its signer as verified.
 "use strict";
 
 const TRUST_KEY = "signpdf.trust.v1";
+const LIST_KEY = "signpdf.trust-list.v1";
+/** A list older than this is stale (spec §9.2: `expires_at` is 30 days after `issued_at`). */
+const LIST_STALE_DAYS = 30;
 const LANG_KEY = "signpdf.lang.v1";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 let wasmModule = null; // compiled once; a fresh instance per operation isolates any trap
-let trust = null; // current TrustStore (object)
+let trust = null; // this browser's own TrustStore (object): saved, exported, extended by fetches
+let list = null; // the signed trust list held: {payload, store, sequence, issued, publisher, keys}
+let listNote = null; // [key, params] of the trust list's status line
+let effective = null; // the store verification uses: `trust` merged over the list
 let currentPdf = null; // Uint8Array
 let lastReport = null; // the report shown, rendered again when the language changes
 let lastError = null; // or the error shown
@@ -71,7 +82,8 @@ function initLanguage() {
       /* storage unavailable: the choice lasts for this visit */
     }
     applyLanguage();
-    if (trust) renderIssuers();
+    if (effective) renderIssuers();
+    renderListNote();
     if (lastReport) renderReport(lastReport);
     else if (lastError) renderError(lastError);
   });
@@ -152,20 +164,117 @@ async function initTrust() {
   }
   // The insecure dev opt-in is never persisted.
   trust.allow_insecure_dev_issuer = false;
+  await refreshEffective();
+}
+
+// --- the signed trust list (trust-list.js; spec/envelope-format.md §9.2) --------------------
+
+/** Ask the engine to take `payload` (with its detached `jws`) under the key-chain rule, from the
+ * state kept in this browser; an empty payload only checks the kept list again. */
+async function considerList(state, payload, jws) {
+  const client = { pins: globalThis.SignpdfTrustList.keys, state };
+  const out = await callOk(
+    "signpdf_trust_list_consider",
+    encoder.encode(JSON.stringify(client)),
+    encoder.encode(payload),
+    encoder.encode(jws),
+  );
+  return JSON.parse(decoder.decode(out));
+}
+
+/** The list a state holds, as the page uses it; null when it holds none. */
+function heldList(state) {
+  if (!state || typeof state.payload !== "string") return null;
+  const store = JSON.parse(state.payload);
+  const keys = (store.issuers || []).reduce((n, i) => n + (i.keys || []).length, 0);
+  return { payload: state.payload, store, sequence: store.sequence, issued: store.issued_at, publisher: store.publisher, keys };
+}
+
+/** Load the signed trust list the build follows: the copy kept in this browser (checked again
+ * under the build's pins), then the publisher's newest, taken only by the key-chain rule. A list
+ * that does not verify is never used; without the publisher, the kept copy stays. */
+async function initTrustList() {
+  const cfg = globalThis.SignpdfTrustList;
+  if (!cfg || !cfg.url || !Array.isArray(cfg.keys) || cfg.keys.length === 0) return;
+  let state = null;
+  try {
+    state = JSON.parse(localStorage.getItem(LIST_KEY) || "null");
+  } catch (_) {
+    state = null;
+  }
+  try {
+    state = (await considerList(state, "", "")).state;
+  } catch (_) {
+    state = (await considerList(null, "", "")).state; // a damaged copy: start without one
+  }
+  let note = null;
+  try {
+    const get = async (url) => {
+      const resp = await fetch(url, { credentials: "omit", cache: "no-cache", redirect: "error" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.text();
+    };
+    const [payload, jws] = await Promise.all([get(cfg.url), get(`${cfg.url}.jws`)]);
+    const r = await considerList(state, payload, jws);
+    if (r.outcome === "ok" || r.outcome === "older" || r.outcome === "older_key") {
+      state = r.state; // an older list changes nothing: the newer one stays held
+    } else if (r.outcome === "unknown_key" || r.outcome === "newer_schema") {
+      note = ["list_update", {}];
+    } else {
+      note = ["list_refused", { reason: r.outcome }];
+    }
+  } catch (e) {
+    note = [state && state.payload ? "list_offline" : "list_missing", { error: e.message }];
+  }
+  try {
+    localStorage.setItem(LIST_KEY, JSON.stringify(state));
+  } catch (_) {
+    /* storage unavailable: the list lasts for this visit */
+  }
+  list = heldList(state);
+  listNote = note;
+  renderListNote();
+}
+
+function renderListNote() {
+  const p = document.getElementById("trust-list-status");
+  if (!p) return;
+  const parts = [];
+  if (list) {
+    const date = String(list.issued || "").slice(0, 10);
+    parts.push(t("list_held", { sequence: list.sequence, publisher: list.publisher || "", date, n: list.keys }));
+    const age = (Date.now() - Date.parse(list.issued)) / 86400000;
+    if (!(age <= LIST_STALE_DAYS)) parts.push(t("list_stale"));
+  }
+  if (listNote) parts.push(t(listNote[0], listNote[1]));
+  p.textContent = parts.join(" ");
+  p.hidden = parts.length === 0;
+}
+
+/** The store verification uses: this browser's own, merged over the list held (the list's key
+ * windows and distrust decisions stand: merging only ever narrows them). */
+async function refreshEffective() {
+  if (list) {
+    const merged = await callOk("signpdf_trust_merge", encoder.encode(list.payload), encoder.encode(JSON.stringify(trust)));
+    effective = JSON.parse(decoder.decode(merged));
+  } else {
+    effective = { ...trust };
+  }
+  effective.allow_insecure_dev_issuer = false;
   renderIssuers();
 }
 
 // The dev identity provider vouches for anyone, so this page never trusts it: demo documents
 // are checked with the command-line tool (`signpdf verify --insecure-dev-trust`).
 function trustBytes() {
-  const t = { ...trust, allow_insecure_dev_issuer: false };
+  const t = { ...effective, allow_insecure_dev_issuer: false };
   return encoder.encode(JSON.stringify(t));
 }
 
 function renderIssuers() {
   const ul = document.getElementById("issuers");
   ul.replaceChildren();
-  for (const iss of trust.issuers) {
+  for (const iss of effective.issuers) {
     const li = document.createElement("li");
     const name = document.createElement("strong");
     name.textContent = iss.name || iss.issuer;
@@ -179,7 +288,7 @@ function renderIssuers() {
     ul.append(li);
   }
   const li = document.createElement("li");
-  li.textContent = t("tsa_anchors", { n: (trust.tsa_anchors || []).length });
+  li.textContent = t("tsa_anchors", { n: (effective.tsa_anchors || []).length });
   ul.append(li);
 }
 
@@ -208,7 +317,7 @@ async function fetchKeys() {
   }
   trust.allow_insecure_dev_issuer = false;
   saveTrust();
-  renderIssuers();
+  await refreshEffective();
   status.textContent = lines.join(" · ");
   if (currentPdf) await runVerify();
 }
@@ -228,7 +337,7 @@ async function loadTrustFile(file) {
     store.allow_insecure_dev_issuer = false;
     trust = store;
     saveTrust();
-    renderIssuers();
+    await refreshEffective();
     status.textContent = t("trust_loaded", { file: file.name });
     if (currentPdf) await runVerify();
   } catch (e) {
@@ -530,6 +639,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       renderError(e);
     }
   });
+  try {
+    // The list first, so the first verification already uses it.
+    await initTrustList();
+  } catch (e) {
+    listNote = ["list_missing", { error: e.message }];
+    renderListNote();
+  }
   try {
     await initTrust();
   } catch (e) {

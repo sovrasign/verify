@@ -43,7 +43,10 @@ trust list it used.
   `next_keys` they committed) and commits each new sequence to the `trust-history` branch as
   `trust-lists/<sequence>.json` and `.jws`, with `index.tsv`. A list that does not verify, or a
   sequence that comes back with other content, fails the run: that is an alert, never archived.
-  `tools/archive/trust_archive.py` uses only the Python standard library.
+  `tools/archive/trust_archive.py` uses only the Python standard library. With the same variable
+  set, the Pages build (`scripts/build-pages-site.sh`) makes the mirror's page follow that list:
+  `trust-list.js` pins the same keys, and the page takes a list only when its signature verifies
+  under them (the key-chain rule), so a provider key rotated out of its JWKS stays trusted.
 
 ## 3. Repository checks (OpenSSF Scorecard)
 

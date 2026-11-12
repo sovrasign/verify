@@ -1,4 +1,12 @@
 {
-  "comment": "The trust-list key chain (P-256 JWKs) every client pins, in order: the key in use, then the next_keys it pre-committed (spec/envelope-format.md §9.2, the key-chain rule: a list signed by a later key wins over any sequence from an earlier one). Empty until production's trust-list key exists: the archive job refuses every list until then.",
-  "keys": []
+  "comment": "The trust-list key chain (P-256 JWKs) every client pins, in order: the key in use, then the next_keys it pre-committed (spec/envelope-format.md §9.2, the key-chain rule: a list signed by a later key wins over any sequence from an earlier one). Sovrasign production's trust-list-1 key (an HSM key in the production Key Vault); kid is its RFC 7638 thumbprint.",
+  "keys": [
+    {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "ZLzPOARYMLvc9AHzAhkqAMlf-skABzzxI0WMA7Y5GaQ",
+      "y": "PK_LHxvxmxhWhzq8HOsvgMgeOlbXa6DtP4JwMAY33tY",
+      "kid": "ejGzneaZySzMvDErt0t1pC_iV5NbmPnpnYgP7r35q2A"
+    }
+  ]
 }
