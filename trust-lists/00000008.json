@@ -1,0 +1,203 @@
+{
+  "allow_insecure_dev_issuer": false,
+  "cells": [
+    "us-1"
+  ],
+  "evidence_keys": [
+    {
+      "crv": "P-256",
+      "first_used": "2026-11-11T00:20:28Z",
+      "kid": "DHDNL-5HLVAT8nkEnNv_8L-yOJaU-HywwhhHknIkmkA",
+      "kty": "EC",
+      "use": "sig",
+      "x": "vOIkcix3JADPoAdGLNiPl9wmqQmTpKA-mM_hDXW8fTk",
+      "y": "ZFXawUsH09c36B_ThH3VsYqYdFAOEH7GGVbRiTGL0g0"
+    }
+  ],
+  "expires_at": "2026-12-13T19:20:50Z",
+  "issued_at": "2026-11-13T19:20:50Z",
+  "issuers": [
+    {
+      "audiences": [
+        "633928120524-d8lnvmqi1kbatoej4ce77e68nlnvgabk.apps.googleusercontent.com"
+      ],
+      "issuer": "https://accounts.google.com",
+      "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+      "keys": [
+        {
+          "alg": "RS256",
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "9e7b714e8bfb4ef03bac2570eb322bfb7d686ee9",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "7O_xgke58DhpSDJRmIMm-u4fcgxyybcqhkKLHesjVvRuhcxYWFUDkb4elTCgEZGH35JXHK0BDZzA1IDuNdum6wnHFC9emCtE0j781ZPVdpK40qBB_tCk05iJrBaeL92Ep4AznwgCUI0ETQkZHnRcHDn2u-XDlABu1a9nfi3ZNL-JYZEBioielRWvIST64Q7EADp8VglvLQTTNcIYXYSoySBlI4YLipMwJYlw49Skac2IunodvJB6z8Z8VcZKvM87uC00CZMfi6ZuIN7Qjval66BIgamM4sJ6W6aUHDFfCiDOuEQtsXo5ItWg70fItLeTpss1_pJdxkM0nzfx6ccmQQ"
+        },
+        {
+          "alg": "RS256",
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "943a3a5d7d919625a454e489b75c29adab57acba",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "pIpnzA2ezyEERJSxiqpLBmMeIqATH-V6iuBtKIibXEyYovujrx8niqTeO6RIyXT6uDUUv0V2kJ8V_iWYFxzXY1BqK9IfcAmjg0XUDoyTVkoyLsF0gj299LH-zw5vCvy8jmamFIZKAbKcQ5hpHvSittM1vl-6vVL-i2GxyGbMA9aY6Hq15NylS1t7ELTYfQimlnvxcb7_DM0cuS5U1SfbCZMCpKhh0nrSlYds240oxpCJOV2rBahs_Ea5c7tezS1nwVC9W_E-bR9TF6BHkC_fv-E8DcWfkI_6geaJzBhINNxBfjx-w1-WUp2Jz3YYFWEfeQjxMqu-Fg6cGxwk7V16uQ"
+        }
+      ],
+      "name": "Google"
+    },
+    {
+      "audiences": [
+        "sovrasign-web"
+      ],
+      "issuer": "https://app.sovrasign.com/v1/idp",
+      "keys": [
+        {
+          "alg": "ES256",
+          "crv": "P-256",
+          "first_seen": "2026-11-10T08:22:21Z",
+          "kid": "67bBl0PTL4RKOsJXSQ0We-o1Q04RYcZsz2ULNmGSn-g",
+          "kty": "EC",
+          "x": "iTnRbHc2p36iKXlELADDFkKmfIqWDDFfxwp--MJ2fT4",
+          "y": "7alIQ2PrdlLT240f_EG9MjgHZOOsw3acwHtMdvzsX8I"
+        }
+      ],
+      "name": "Sovrasign email code",
+      "requires_trusted_time": true
+    },
+    {
+      "audiences": [
+        "com.sovrasign.signin"
+      ],
+      "issuer": "https://appleid.apple.com",
+      "jwks_uri": "https://appleid.apple.com/auth/keys",
+      "keys": [
+        {
+          "alg": "RS256",
+          "e": "AQAB",
+          "first_seen": "2026-11-11T03:13:06Z",
+          "kid": "GNCf4J83Oh",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "0n5COwAlDNqbSbKrmA91jkAmZXLV0LKki5Iv-Ic4LRsXvkbQWG1HG56qE4KrXPdfSCFVfDEz-9J2Li3YFKhpDFl3Tq6UxcIW-VzQuyMbwSkjkYze7v-RsRl_7fWod2XR6znjqym_QhAnX_hoFUIzNPj1Wy9aeSGekUaBiNZnUinCsz7xsqmDonS-BVygEc8NYDCjPSMA1yHXjVGGUI1-KFUDuqenLtOLlzqKk4bKQlCucgDpTSySiTC_TEDk-W6c7LiiFwRTkhp9DlOTmUz-e6KT5HRnWYc2yyUeQwxCDVApOa93EtzuuIqI8z3v-LfPs-A_h_tJ7MYaPDM3oKfxFQ"
+        },
+        {
+          "alg": "RS256",
+          "e": "AQAB",
+          "first_seen": "2026-11-11T03:13:06Z",
+          "kid": "nP41CGTvOz",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "5t6lyqRebZHCK0v8B0RbG7opwbEqO3H7iH9eZ00DM65_kGzI7FfumDiRQzPFD51Sm7Dn3puwcfo8dcDJyoOgVrqhbazgBDNNHFUJqMH_t5TTYYXFSCJHP_gQwLPvwLnPfAj75lZu2w4sb1Z1hvkibDoJcFSsKwomjPnBHSSJE1JtnHsAvucJZbsnwEcy4DXnlbkjv_BBrKLGouBpX2n_T5vSDn98_pU4KPD7_WOs8JXBvkYJVbhkV55LtwfrrfKq0jmABGDRjYebOj_qEM0EBeN7F4vSXyFejViieIMdlX4_dG4QUmwJ23LhWXQ7Ik7efCHdSb_Bv1Jm6xbkQbPrUQ"
+        },
+        {
+          "alg": "RS256",
+          "e": "AQAB",
+          "first_seen": "2026-11-11T03:13:06Z",
+          "kid": "8nTlO3M2Bk",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "xOu-GP0-nzajn7s732MfYCtP11ns6GU65M-1ce-DDduxbukLXHAyhd0EsxJSWgKBgG6BEu3rvrpPNl0hc2Af77OE58jZos5j08QDtdyj4VWZCTSuC0zr9Ory8S4RqaFWVYEUpBVXFXqqXzvtlZlegqs0YOIqbAdia-nQGnFcEtnPW0VDL_k7q8D5tWs5o8YHUlYEOAEm2xJA9OrFufExmXQeWiN8-CzFhzkNIyspZBEwz7gRjihnQpZz8KorZSl2JJK6JGR3JFZ_GGBI95CzPSR7oy1bWwCsIebiF05ISR0_ogNqdU-O1kro6Peuq9XT0tMCAlC3dhFUoH1nxhvacQ"
+        }
+      ],
+      "name": "Apple"
+    },
+    {
+      "audiences": [
+        "ddccd02e-f527-442d-845f-11be4cfadce9"
+      ],
+      "issuer": "https://login.microsoftonline.com/{tenantid}/v2.0",
+      "jwks_uri": "https://login.microsoftonline.com/common/discovery/v2.0/keys",
+      "keys": [
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "vEgXMKRi8IHKwAboBItSiOApgqo",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "rFjPHpYhfqS4xknyXgeVMnCSdf_g-b7bglaOcRLnKgY7Pd2qHRPX0hMB-P2vobrXh39ztDpJPZyMocKmjiUKorjuTn5S1TpLVZqT2loliFQNJv4z5KgWuCV33h28p0GK8T4kwjp5_OavU9HU6lHc1_QuBHl8nNmOxBnNUzIL62-RkeJU7YsvQtyJiiKokCrowIV9zthQIM_Y7XZ18RpLIFE4wuSp4oLbgH1FhXwYMgHl8exqfPga0I_FiXZk0vMUyuLPH9LoZnZKBqDzSNA0MIybGt29tZ7cQipd_kO19r4gyIaZsPK-bCJrr9h9-M4y3sqzKXbeL9h2QObs9tLGIw"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "R5qOXefkAgOfTi4DSCdfDz_EU0U",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "qrAoSG3wkF2kfEbYkWQgEWtroQtg0XkT1liWg1jyTdiE1HSlDZ9EBwnWrujcTPwwqBkldscp8BdH17VjD-V5idbcfajZksxU-pWymG-IAUrmHopwTmpilGb1NJtw-5muRdWCJVkZlJOQtqQ9RFSaSmBoC8DdrT4EnSiaSsQS8KC5JUvBJVgZabp61OLDpbdtHTa6JP5IQg92pWW9xKJ9b1PuaA82CG6WuCIgwBEuAson7_URyRQSJhjfu0Of8_rBZ3XdJLKUEUft7PeRtSBPAie2ZuKi16HePoBOGWQpWhSB11t5UxO8eaFLhjSNW7124QK2zLs_4mSzBetcjJGc5w"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "MYL4YuBdtqTrz0Wdxkl7_XDVJfE",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "29qmxuZVQJWHePmspaZUoJ17ODQy8YsKvDvMa_SMYU7-2eCYLXP5sZ4vM0jnWU8IGgE58fZblj6nbNYAYWYJVqJWxfmxTMtsvdjT-NtvQV7PXHmdS_DW6QnYhAjoA3PG9oVyk7EuLCq3JYrLg2kMWx5a6xuZnGSAWR5-ra4EO8xPJfhaf0NhdiD7LavLdf7hTGX6eYQfEJSZcmPozxiTaBrQ41oASlPI2_oVYS7_CTCpHy0bvCfKgvl12DGX8IgaZCyPxRaD4TLbrb71zCrcf1hmbC2_ERW_p0QtJm8GBwAxkAAIT4DnHLFwTeqFB1OyFuBDViiq8TGR9VuS8PRNPQ"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "ryBx-65jNoxH4FQH_6zarNjaNf4",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "iqM4Bfaajyycy3k6Mry1a2IdYQybEg_xwGjLXcEnEeeSBXauzlopprcOrIozQC9qHxFmBVieYMWCHI0IC-PhivuHG8CY_J-VCUpumpF5yoJc4KYuVxC0rwYG9srvOwz7Dc0Qmz49qUjEemPWxNRsIc0VsdVfgyQtoHNHrmvJ5MnWgZ4Ldyp3qrz1vXJbc5FJBW0CTUc7s61MS27dYNqiKAkQmDOQdtPdq3pQhZBO9bcNQmWR4Oj171PLjCMXLglXbpJRwrdn3peK9c73kGb6AiWXsKFiEPpDZYfWjztH3le9aXTNZqK6Uzx5GWhWEkz865x5IGhBIsSrK5jYf1ctGw"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "Xqtg30yHerhLh5UO88-4NMblzWA",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "xflocHUZsXw2AtYn8c9p13rdWAI2xNmy_RuUc_fxd-mWO_U5ApmDsW4qmtLHNQloHWL77UMi8o5qfilwBYOjRT4DrUqTk_4yWgCZwfIJZOT2UIF2QJwYG-QcwWkFTPCKSR83DSUXDMjPhItsbX8O2fD1wYKws3u8Sy97Tj-BdezTGOen5OF9XRmp6EUffDHd22r0PBACrgLnj7gYLL5j-aLKOhXBX6wfJyCeF_G6vnrXh3vueUiNL_eVgxu88uoxEvngdn779bbUoIZAh8cAKIyKXZ4KrmSO_pyrTXDP6w1ygejgWb0ZKnhO7oshxr0C6oYw3Qm1WDtmFrEumXZOyw"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "7zs6zYTk9g5j_b7e7ItWW-HaAL4",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "jJKKR1Cil681MBvu5sX-JkJsT_fj4QOh-QTxDuY0WZxTb1dRZM2QCGKFhMt20P5bW6INZIXFLM0jrfoLRKoDncGmaKkGDNMjiwOBtAGjJBLxLvqSD-Q8UwAslVyV_UnwKp_Fvdklm9rTH8uGSSKyylia-JMw5Leo2bL-FvHQfVgW2-FtrLrN6tQemAJNMLm_jZzEa9vz0MEiXtQtyO2XqIzeyZvOl5lDjxv7J4qvcs9rmShufbi_vlmgwvctfuAxWZLIF5V98tbj1D6RgsbaUOGK7P3WQ1Z881VyooYmwcSvHBBxSk3XTAnlfGm-EB-P4z3sDrdzjUo2LTIfWYwqUw"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "e1ApdTPqxaLoJi3AWK4InqBnqV4",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "mzKR2vNZ26hq5TnscDesYry6699ZNTM-fuTDVF3d64fwi1mLF7QU5uOyKAgG3V6D5fpDKaIvvQ7oncRXlqNFTuWN95sI3D2GVWWaoDzYFol3M-fWSIvxjUQUl0I3GTmtEgPwPEUqd7J7B7rImUarVetre1M31Trg64xIx7Z7SUojw2aym90TIDAfLglDAYkku18-fsZTz26ZDLl97EYscDD35cMQAoYN2Kd-Kl2ZwaC_32VyRR6aNVpaCpqcB1uU9Ej9ahr6f0aBpp69L29R4dtichskRqQdreuqXxeakA4KBEFDwTOjMo9W7Wg2MlGU8Ck2cQnSsU7tUeOvB6ZRew"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "84cJE_AjkQHp4Vee5OaZIAlvWuU",
+          "kty": "RSA",
+          "last_seen": "2026-11-11T00:00:00Z",
+          "n": "rE_wrzzIgy8-cKDq9m2z_r0pu5jzYv4uOtJ6IwdMnSzeJVz-38KWDsJyPw66W_56N1FGEofdptufx9FRwrKwVKvtQaaSMKbOTPDUCCDc_KPCCsikfLw4vW0yObRDmUyKCc8BERuH5yqrtd3Kd4c_A3J7_JpFV-rzw1otndFHC9oftVtNbFB3Lle_tfTchm4qQhiRJ0VgvEeOoic3sk86_yJVkITgWXQeaxpQqAy8tVseSp0tLRMz2w_RxYtEWSJkB_WoJnrqDiAK3NW7EUlqQjdvmPmKy4wkhMzhOSrNCbRACm6jZvUDwJ7ltek4dbMZmLq2MFAc622buagR9E1Z5Q"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-10T08:19:50Z",
+          "kid": "xH9DJH3N086Ags8JL6IQzeQh1p8",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "kb4gbJTXZw_YSZgWV56WlWs08NZA92CwmXl_i21SrLdik93Si50VhmmNq5NsFVVQSiZGfEIILg-R_QN1WCYl6AJM8qIBKw-LbY8cD6_Fqijuzj8zxZ7DS-xaietTU5YO6ic5y9_rufRoBbiJB0i65u6ST7j5QQcOa2yXMoV2MN473D-0SPc4FQchrIHEvbbiPvsVFqB_p1WVvoiP5zs_QRWErQh14ngxnEq1-gUOwPawR1GCQeqpPNkiY_EnlJBQaEz53lVt8ka1UiDcq9YWE78tsiJBmkRdp_Qrn8ysZhNQVtB4R11lWpdrzLzW9EuX1quVpA2j67LewesgsxQu4Q"
+        },
+        {
+          "e": "AQAB",
+          "first_seen": "2026-11-13T19:15:27Z",
+          "kid": "UloAReFhxlC3GvdvIns6r6l44mU",
+          "kty": "RSA",
+          "last_seen": "2026-11-13T00:00:00Z",
+          "n": "jMXROkcWXsTrT9GMOKq7GIjz5xfUvFTAuZAbIFq8rq2w5XNnx2B-v2K5s9Ijed4u9h7Uwfn7tW2zfb7HnQYkjgf9sU5xZDIEXBwnb6Bks38wJYA_ImrMILDwdaAe3VdBPbV44HQXW9dUvMMlMVnQk_kUCB3ei4hyfAko0ER6IFsu-2yl6Eu6lBHe5q0_FWQ94LpF2IUQS9TBVJwJpMPewbf-Tx8oSzVkDiZVnwXl6JCE3UzOsLtt2FFLq3XFg7eh-ff5pLABmXiqBkTOmH_-zKfreL3wVFHwD3_x0trhbepBDoqEwcT-XvYPQx8x7845T6OGfBQoKwXq7mphAdd0aw"
+        }
+      ],
+      "name": "Microsoft"
+    }
+  ],
+  "next_keys": [],
+  "publisher": "https://app.sovrasign.com",
+  "schema": 2,
+  "sequence": 8,
+  "tsa_anchors": [
+    "MIIFkDCCA3igAwIBAgIQBZsbV56OITLiOQe9p3d1XDANBgkqhkiG9w0BAQwFADBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBUcnVzdGVkIFJvb3QgRzQwHhcNMTMwODAxMTIwMDAwWhcNMzgwMTE1MTIwMDAwWjBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBUcnVzdGVkIFJvb3QgRzQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQC/5pBzaN675F1KPDAiMGkz7MKnJS7JIT3yithZwuEppz1Yq3aaza57G4QNxDAf8xukOBbrVsaXbR2rsnnyyhHS5F/WBTxSD1Ifxp4VpX6+n6lXFllVcq9ok3DCsrp1mWpzMpTREEQQLt+C8weE5nQ7bXHiLQwb7iDVySAdYyktzuxeTsiT+CFhmzTrBcZe7FsavOvJz82sNEBfsXpm7nfISKhmV1efVFiODCu3T6cw2Vbuyntd463JT17lNecxy9qTXtyOj4DatpGYQJB5w3jHtrHEtWoYOAMQjdjUN6QuBX2I9YI+EJFwq1WCQTLX2wRzKm6RAXwhTNS8rhsDdV14Ztk6MUSaM0C/CNdaSaTC5qmgZ92kJ7yhTzm1EVgX9yRcRo9k98FpiHaYdj1ZXUJ2h4mXaXpI8OCiEhtmmnTK3kse5w5jrubU75KSOp493ADkRSWJtppEGSt+wJS00mFt6zPZxd9LBADMfRyVw4/3IbKyEbe7f/LVjHAsQWCqsWMYRJUadmJ+9oCw++hkpjPRiQfhvbfmQ6QYuKZ3AeEPlAwhHbJUKSWJbOUOUlFHdL4mrLZBdd56rF+NP8m800ERElvlEFDrMcXKchYiCd98THU/Y+whX8QgUWtvsauGi0/C1kVfnSD8oR7FwI+isX4KJpn15GkvmB0t9dmpsh3lGwIDAQABo0IwQDAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQU7NfjgtJxXWRM3y5nP+e6mK4cD08wDQYJKoZIhvcNAQEMBQADggIBALth2X2pbL4XxJEbw6GiAI3jZGgPVs93rnD5/ZpKmbnJeFwMDF/k5hQpVgs2SV1EY+CtnJYYZhsjDT156W1r1lT40jzBQ0CuHVD1UvyQO7uYmWlrx8GnqGikJ9yd+SeuMIW59mdNOj6PWTkiU0TryF0Dyu1Qen1iIQqAyHNm0aAFYF/opbSnr6j3bTWcfFqK1qI4mfN4i/RN0iAL3gTujJtHgXINwBQy7zBZLq7gcfJW5GqXb5JQbZaNaHqasjYUegbyJLkJEVDXCLG4iXqEI2FCKeWjzaIgQdfRnGTZ6iahixTXTBmyUEFxPT9NcCOGDErcgdLMMpSEDQgJlxxPwO5rIHQw0uA5NBCFIRUBCOhVMt5xSdkoF1BN5r5N0XWs0Mr7QbhDparTwwVETyw2m+L64kW4I1NsBm9nVX9GtUw/bihaeSbSpKhil9Ie4u1Ki7wb/UdKDd9nZn6yW0HQO+T0O/QEY+nvwlQAUaCKKsnOeMzV6ocEGLPOr0mIr/OSmbaz5mEP0oUA51Aa5BuVnRmhuZyxm7EAHu/QD09CbMkKvO5D+jpxpchNJqU1/YldvIViHTLSoCtU7ZpXwdv6EM8Zt4tKG48BtieVU+i2iW1bvGjUI+iLUaJW+fCmgKDWHrO8Dw9TdSmq6hN35N6MgSGtBxBHEa2HPQfRdbzP82Z+"
+  ],
+  "type": "sovrasign-trust-list"
+}
