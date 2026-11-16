@@ -12,6 +12,14 @@ released: [docs/RELEASES.md](docs/RELEASES.md) §4.
 
 While a version is being prepared its heading says `unreleased`; tagging it gives it a date.
 
+## [0.3.0] - unreleased
+
+- RSA signatures (identity-provider tokens, TSA certificates) are verified with rsa 0.10.0, the
+  stable release, instead of its release candidate 0.10.0-rc.19. It fixes RUSTSEC-2023-0071 (a
+  timing side channel in private-key operations, which the engine never performs outside its
+  tests) and checks a signature's length and range before the public-key operation. What
+  verifies is unchanged: the compatibility corpus passes as before.
+
 ## [0.2.0] - 2026-11-15
 
 The first tagged version of the engine.

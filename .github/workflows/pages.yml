@@ -99,8 +99,10 @@ jobs:
           cp site/SHA256SUMS site/BUILD.md .
           sha256sum verifier-site.tar.gz >> SHA256SUMS
       # SLSA build provenance for every file of the site (Sigstore, signed with this workflow's
-      # identity): `gh attestation verify <file> --repo sovrasign/verify` checks a copy. The bundle
-      # also goes into the release, which is what Scorecard's Signed-Releases check looks for.
+      # identity): `gh attestation verify <file> --repo sovrasign/verify` checks a copy. The release
+      # keeps the Sigstore bundle and, as `verifier-site.intoto.jsonl`, the signed in-toto
+      # statement inside it (its DSSE envelope, one JSON line, the SLSA convention): the names
+      # Scorecard's Signed-Releases check looks for (signature and provenance).
       - id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -108,7 +110,9 @@ jobs:
       - name: Keep the provenance bundle
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-        run: cp "$BUNDLE" verifier-site.sigstore.json
+        run: |
+          cp "$BUNDLE" verifier-site.sigstore.json
+          jq -ce '.dsseEnvelope' "$BUNDLE" > verifier-site.intoto.jsonl
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.name.outputs.tag }}
@@ -119,6 +123,7 @@ jobs:
             verifier-site.tar.gz
             SHA256SUMS
             verifier-site.sigstore.json
+            verifier-site.intoto.jsonl
       - name: Ask Software Heritage to archive the repository
         # Best effort: the archive is a second copy, and the service rate-limits anonymous requests.
         continue-on-error: true

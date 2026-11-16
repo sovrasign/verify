@@ -1,0 +1,9 @@
+# OSV-Scanner: known vulnerabilities in every committed lockfile (core/Cargo.lock and the others),
+# from osv.dev: `osv-scanner scan source --config=core/osv-scanner.toml --lockfile=core/Cargo.lock`.
+# The file sits next to core/Cargo.lock because OSV-Scanner, and OpenSSF Scorecard's
+# Vulnerabilities check, read the ignores next to the lockfile. An entry here needs the reason it does not apply; cargo deny
+# (core/deny.toml) ignores the same advisories.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0192"
+reason = "ttf-parser is unmaintained, with no known vulnerability. lopdf 0.42 depends on it, and lopdf 0.44 and later (which drop it) no longer let the engine build the per-entry reader its revision audits use; the move to lopdf 0.47 and skrifa is planned. ttf-parser parses only the host's own bundled signature font, never document content."

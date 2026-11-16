@@ -1,4 +1,26 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.crypto-bigint]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.7.10 -> 0.7.11"
+notes = "Delta reviewed with Claude Code (AI-assisted). No unsafe code added or changed, no build script or I/O. Thumb-1 constant-time fixes, bits -> bit_width rename with deprecated aliases, BoxedMontyForm squaring optimisation, BoxedUint parses 0 as one limb."
+
+[[audits.ctutils]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.6 -> 0.4.8"
+notes = "Delta reviewed with Claude Code (AI-assisted). forbid(unsafe_code); no build script or I/O. Thumb-1 and RISC-V 32 constant-time hardening of comparisons."
+
+[[audits.pkcs1]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.0-rc.5 -> 0.8.0"
+notes = "Delta reviewed with Claude Code (AI-assisted). forbid(unsafe_code); no build script or I/O. Ref/owned public-key split, new trait impls, rejects empty otherPrimeInfos."
+
+[[audits.rsa]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.0-rc.19 -> 0.10.0"
+notes = "Delta reviewed with Claude Code (AI-assisted). No unsafe code, build script, file, network or process access. Final release of the same project: num-bigint-dig fully gone, implicit rejection for PKCS#1 v1.5 decryption, cfrg-rsa-guidance hardening of private-key operations. The engine's path, PKCS#1 v1.5 verification, checks the signature length and s < n before the public operation and unpads as before. Fixes RUSTSEC-2023-0071."
