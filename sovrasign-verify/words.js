@@ -222,14 +222,14 @@ export function errorVerdict(error) {
     return {
       kind: "warn",
       title: "Made by a newer version",
-      line: "This document was made by a newer version of the SignPDF engine than this page. Reload the page to get the current verifier, then check it again.",
+      line: "This document was made by a newer version of Sovrasign than this page. Reload the page to get the current verifier, then check it again.",
     };
   }
   if (/no embedded envelope/.test(error.message || "")) {
     return {
       kind: "bad",
       title: "No Sovrasign signatures",
-      line: "This PDF has no Sovrasign or SignPDF signing history to check. Other kinds of PDF signatures need another verifier.",
+      line: "This PDF has no Sovrasign signing history to check. Other kinds of PDF signatures need another verifier.",
     };
   }
   return { kind: "bad", title: "Could not check this file", line: error.message || String(error) };

@@ -9,8 +9,12 @@
 //
 // The JWS payload names how many bytes come before the seal line and their SHA-256. Anything
 // changed before the line changes the hash; anything added after it is not the exact ending
-// above. The keys are the service's evidence keys (GET /v1/evidence/jwks), checked by their
-// RFC 7638 thumbprint. Pure functions over bytes, with WebCrypto: tools/seal.test.mjs runs them.
+// above. The keys are the service's evidence keys, checked by their RFC 7638 thumbprint: first
+// those of Sovrasign's signed trust list (`evidence_keys`, believed only once the list's own
+// signature verified under this page's pinned keys: trust-list.js), so a seal can be checked
+// without asking our service; else the ones GET /v1/evidence/jwks serves (tracker
+// t-sar-anchor-publish; checkSealWithList). Pure functions over bytes, with WebCrypto:
+// tools/seal.test.mjs and tools/seal-trust-list.test.mjs run them.
 
 const MARKER = "%SOVRASIGN-SEAL ";
 const TYP = "sovrasign-seal+jws";
@@ -101,4 +105,37 @@ export async function checkSeal(bytes, jwks) {
   if (statement.len !== found.at || statement.sha256 !== digest) return { state: "changed", statement };
   if (!found.tailOk) return { state: "added", statement };
   return { state: "sealed", statement };
+}
+
+/**
+ * The evidence keys a signed trust list names (`{keys: [...]}`; none for a list without them).
+ * Give only a list whose signature was checked (trust-list.js TrustList.status().list).
+ */
+export function evidenceKeysOf(list) {
+  const keys = Array.isArray(list?.evidence_keys) ? list.evidence_keys : [];
+  return { keys: keys.filter((k) => k && k.kty === "EC" && k.crv === "P-256" && typeof k.x === "string" && typeof k.y === "string") };
+}
+
+/**
+ * Check a sealed certificate under the signed trust list's evidence keys first, then, only when
+ * the list does not name the seal's key, under the keys `fetchKeys()` returns (the service's
+ * GET /v1/evidence/jwks). The result is checkSeal's, with `keys`: `trust_list` (the signed list
+ * vouched for the key: no call to our service was needed), `service` (the service's own answer)
+ * or `none` (no key known to either).
+ */
+export async function checkSealWithList(bytes, list, fetchKeys) {
+  const fromList = evidenceKeysOf(list);
+  if (fromList.keys.length) {
+    const r = await checkSeal(bytes, fromList);
+    if (r.state !== "unknown_key") return { ...r, keys: "trust_list" };
+    if (!findSeal(bytes)) return { ...r, keys: "none" };
+  }
+  let served = { keys: [] };
+  try {
+    served = (await fetchKeys()) || { keys: [] };
+  } catch {
+    /* unreachable: the seal reads as unknown */
+  }
+  const r = await checkSeal(bytes, served);
+  return { ...r, keys: r.state === "unknown_key" || r.state === "none" ? "none" : "service" };
 }

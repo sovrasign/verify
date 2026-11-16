@@ -16,7 +16,8 @@
 use std::cell::RefCell;
 
 use signpdf_core::{
-    completion_certificate, verify, verify_at, PublishedJwks, SignPdfError, TrustStore,
+    completion_certificate, completion_certificate_named, verify, verify_at, PublishedJwks,
+    SignPdfError, TrustStore,
 };
 
 #[cfg(feature = "signing")]
@@ -256,6 +257,32 @@ pub unsafe extern "C" fn signpdf_certificate(
     finish((|| {
         let trust = trust_from(trust)?;
         completion_certificate(pdf, &trust).map_err(verify_err)
+    })())
+}
+
+/// [`signpdf_certificate`] naming the host's product (UTF-8, 1 to 40 printable ASCII
+/// characters) in the certificate's title, footer and advice on how to check the signed PDF.
+/// Result: the PDF bytes.
+///
+/// # Safety
+/// Pointer/length pairs must describe readable memory.
+#[no_mangle]
+pub unsafe extern "C" fn signpdf_certificate_named(
+    pdf_ptr: *const u8,
+    pdf_len: usize,
+    trust_ptr: *const u8,
+    trust_len: usize,
+    name_ptr: *const u8,
+    name_len: usize,
+) -> i32 {
+    let pdf = bytes(pdf_ptr, pdf_len);
+    let trust = bytes(trust_ptr, trust_len);
+    let name = bytes(name_ptr, name_len);
+    finish((|| {
+        let trust = trust_from(trust)?;
+        let name = std::str::from_utf8(name)
+            .map_err(|_| (ERR_DECODE, "the product name must be UTF-8".to_string()))?;
+        completion_certificate_named(pdf, &trust, name).map_err(verify_err)
     })())
 }
 

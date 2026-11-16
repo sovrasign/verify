@@ -38,6 +38,7 @@ fn appearance(name: &str) -> SignAppearance {
         rect: Some([72.0, 700.0, 300.0, 740.0]),
         caption: None,
         ink: None,
+        organization: None,
     }
 }
 
@@ -240,6 +241,7 @@ fn two_signer_request(pdf: &[u8]) -> (KeyPair, PrepareRequest) {
         service_link: None,
         documents: Vec::new(),
         verify_at: None,
+        stamp: None,
     };
     (key, req)
 }

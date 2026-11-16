@@ -56,7 +56,7 @@ fn a_prepared_envelope_names_the_name_rule() {
     );
     let prepared = prepare(&pdf, &req, &pk).unwrap();
     let env = read_envelope(&prepared).unwrap();
-    assert_eq!(env.schema_version, 9);
+    assert_eq!(env.schema_version, signpdf_core::SCHEMA_VERSION);
     assert_eq!(env.initials_rule, Some(InitialsRule::NameV1));
 }
 

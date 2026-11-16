@@ -384,6 +384,7 @@ fn token_obtained_via_oidc_signs_and_verifies_a_real_document() {
         service_link: None,
         documents: Vec::new(),
         verify_at: None,
+        stamp: None,
     };
     let prepared = prepare(&source, &prepare_req, &preparer_key).expect("prepare");
 

@@ -50,6 +50,15 @@ corpus/
                           with the signers named "Alice Example" and "Bob Builder", so the
                           initials fields of the envelope of several documents hold AE and BB
                           (their addresses alone would give A and B)
+  v10/
+    2026-11-14-7256808/   a stamp word and colour chosen by the preparing host: the v9 documents
+                          with "Example <id>" on a green document-ID stamp (the envelope of
+                          several documents keeps "SignPDF Document <id>" on yellow)
+  v11/
+    2026-11-14-e2c3186/   the v10 documents drawn with version 11's look: each signature box
+                          shows the drawing (or the email) large with the details in one small
+                          row under it, and the document-ID stamp's box is measured from
+                          Helvetica's widths
   newer/
     schema-v1000.pdf      a sound document whose envelope claims version 1000
 ```

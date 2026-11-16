@@ -16,6 +16,7 @@ fn appearance(name: &str) -> SignAppearance {
         rect: Some([72.0, 700.0, 300.0, 740.0]),
         caption: None,
         ink: None,
+        organization: None,
     }
 }
 
@@ -161,8 +162,10 @@ fn captioned_appearance(name: &str) -> SignAppearance {
             code: "deadbeef".into(),
             signed_at: "2026-06-24 18:00 UTC".into(),
             issuer: "google".into(),
+            look: Default::default(),
         }),
         ink: None,
+        organization: None,
     }
 }
 

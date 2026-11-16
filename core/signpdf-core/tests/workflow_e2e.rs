@@ -1247,17 +1247,22 @@ fn a_drawn_signature_is_shown_beside_the_verified_identity() {
         .find(|s| s.contains("(alice@example.com) Tj"))
         .expect("the signer's signature appearance");
     // The verified caption is still there, in full...
-    assert!(signature_box.contains("(Signed by:) Tj"));
+    assert!(signature_box.contains(r"(Sig "), "{signature_box}");
     assert!(signature_box.contains("via "), "{signature_box}");
     // ...and the ink is drawn: three stroked paths with a round pen.
     assert!(signature_box.contains("1 J\n1 j\n"), "{signature_box}");
-    assert_eq!(signature_box.matches(" m\n").count(), 3, "{signature_box}");
+    assert_eq!(
+        signature_box.matches(" m\n").count(),
+        4,
+        "baseline + 3 strokes: {signature_box}"
+    );
     assert_eq!(
         signature_box.matches("\nS\n").count(),
         4,
-        "frame + 3 strokes: {signature_box}"
+        "baseline + 3 strokes: {signature_box}"
     );
-    // The drawing stays inside the left part of the 200 x 40 box.
+    // The drawing stays inside the 200 x 40 box, above the baseline (schema version 11: the whole
+    // width; before, the left 40 %). The baseline itself runs at about y 9.
     for line in signature_box
         .lines()
         .filter(|l| l.ends_with(" m") || l.ends_with(" l"))
@@ -1267,7 +1272,7 @@ fn a_drawn_signature_is_shown_beside_the_verified_identity() {
             .map(|v| v.parse::<f32>().unwrap_or(f32::NAN));
         let (x, y) = (n.next().unwrap(), n.next().unwrap());
         assert!(
-            (4.0..=80.0).contains(&x) && (3.0..=37.0).contains(&y),
+            (3.0..=197.0).contains(&x) && (9.0..=37.0).contains(&y),
             "{line}"
         );
     }

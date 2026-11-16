@@ -506,6 +506,80 @@ fn the_newest_version_has_initials_from_slot_names_in_the_corpus() {
     );
 }
 
+/// Version 10's `stamp`: the newest corpus has a valid document whose preparer chose a word and
+/// a green box, drawn as such, and one without a choice, drawn with the legacy word on yellow.
+#[test]
+fn the_newest_version_has_a_chosen_stamp_in_the_corpus() {
+    let (mut chosen, mut legacy) = (false, false);
+    for set in fixture_sets()
+        .into_iter()
+        .filter(|s| s.version == SCHEMA_VERSION)
+    {
+        let trust = set.trust();
+        for pdf_path in set.pdfs() {
+            let pdf = std::fs::read(&pdf_path).unwrap();
+            let report = verify(&pdf, &trust).unwrap();
+            if !report.valid {
+                continue;
+            }
+            let env = report.envelope.as_ref().unwrap();
+            let line = |word: &str| format!("({word} {})", env.envelope_id).into_bytes();
+            let has = |needle: &[u8]| pdf.windows(needle.len()).any(|w| w == needle);
+            match &env.stamp {
+                Some(s) if s.color == signpdf_core::StampColor::Green => {
+                    assert!(has(&line(&s.word)), "{}", pdf_path.display());
+                    assert!(has(b"0.89 0.96 0.9 rg"), "{}", pdf_path.display());
+                    chosen = true;
+                }
+                None => {
+                    assert!(has(&line("SignPDF Document")), "{}", pdf_path.display());
+                    legacy = true;
+                }
+                _ => {}
+            }
+        }
+    }
+    assert!(
+        chosen && legacy,
+        "the v{SCHEMA_VERSION} corpus lacks a chosen green stamp or a default one: add a fixture \
+         set from a commit whose demo chooses one (scripts/make-schema-corpus.sh)"
+    );
+}
+
+/// Version 11's look: the newest corpus has a valid signed document whose signature boxes are
+/// drawn as the hero layout (no `Signed by:`, the details row with `·`), and every stamp in it is
+/// the measured one (no line runs past its box).
+#[test]
+fn the_newest_version_has_the_hero_signature_box_in_the_corpus() {
+    if SCHEMA_VERSION < 11 {
+        return;
+    }
+    let mut hero = false;
+    for set in fixture_sets()
+        .into_iter()
+        .filter(|s| s.version == SCHEMA_VERSION)
+    {
+        let trust = set.trust();
+        for pdf_path in set.pdfs() {
+            let pdf = std::fs::read(&pdf_path).unwrap();
+            let report = verify(&pdf, &trust).unwrap();
+            if !report.valid {
+                continue;
+            }
+            let has = |needle: &[u8]| pdf.windows(needle.len()).any(|w| w == needle);
+            assert!(!has(b"(Signed by:) Tj"), "{}", pdf_path.display());
+            if has(br" \267 via ") {
+                hero = true;
+            }
+        }
+    }
+    assert!(
+        hero,
+        "the v{SCHEMA_VERSION} corpus has no signature box in the hero layout: add a fixture set \
+         from a commit whose demo signs with a visible box (scripts/make-schema-corpus.sh)"
+    );
+}
+
 /// The verdict fields that must not change between builds, compared where the generating
 /// build's report has them (older builds report fewer fields).
 const TOP_FIELDS: &[&str] = &[

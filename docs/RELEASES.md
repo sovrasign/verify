@@ -67,3 +67,26 @@ every week. What the repository does for each check:
 | SAST | CodeQL on every pull request and push (`.github/workflows/codeql.yml`) |
 | Security-Policy | `SECURITY.md` |
 | License | `LICENSE-MIT`, `LICENSE-APACHE`, `REUSE.toml` |
+
+## 4. Engine versions
+
+The engine's crates in `core/` share one version, `[workspace.package] version` in
+`core/Cargo.toml`, which `signpdf_version` reports. [CHANGELOG.md](../CHANGELOG.md) has an entry for
+each one.
+
+- **The rule.** A change to what verifies, or how, is at least a minor version, and the
+  compatibility corpus must pass unchanged (an entry in the changelog says why when it cannot,
+  which is only allowed for experimental schema versions). `scripts/check-engine-version.py`,
+  in the `release` part of `scripts/check.sh`, enforces the first half: when a file that decides
+  verification (its `VERIFICATION_FILES`: the engine's source, the WebAssembly entry points, the
+  corpus and its expected reports, the test vectors, the verifier page's trust-list handling and
+  the pinned trust-list keys) differs from the nearest `core-v*` tag, the version must be at least
+  one minor version above that tag's, with a changelog entry. The corpus tests (`cargo test`, the
+  `wasm` part) enforce the second.
+- **Between releases.** The first verification change after a tag raises the minor version and
+  adds `## [<version>] - unreleased` to the changelog; later changes before the next tag add to
+  that entry and need no further bump.
+- **Releasing.** Replace `unreleased` with the date, merge into `main`, then tag the merge commit
+  `core-v<version>` (annotated: `git tag -a core-v0.2.0 -m "SignPDF engine 0.2.0"`) and push the
+  tag. The check fails if a tag names another version than its commit's `core/Cargo.toml`. It
+  needs the whole history (CI checks out with `fetch-depth: 0`); in a shallow clone it fails.

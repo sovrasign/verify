@@ -169,6 +169,7 @@ pub fn prepare_request(
         service_link: None,
         documents: Vec::new(),
         verify_at: None,
+        stamp: None,
     };
     (key, req)
 }

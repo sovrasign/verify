@@ -36,8 +36,8 @@ use crate::ink::{self, SignatureDrawing};
 use crate::ltv;
 use crate::messages::{self as m, Finding, MessageCode, Severity};
 use crate::model::{
-    AuditAction, AuditEntry, Envelope, EnvelopeDocument, EsignConsent, Field, FieldType, Policy,
-    RecordKind, SignatureRecord, Signer, SignerStatus, TimestampPolicy,
+    AuditAction, AuditEntry, Envelope, EnvelopeDocument, EsignConsent, Field, FieldType, IdStamp,
+    Policy, RecordKind, SignatureRecord, Signer, SignerStatus, StampColor, TimestampPolicy,
 };
 use crate::numbers::NumberFormat;
 use crate::oidc::{
@@ -45,8 +45,8 @@ use crate::oidc::{
     VerifiedIdentity,
 };
 use crate::pades::{
-    self, AddedAnnotation, Dss, EmbeddedFile, FieldMark, FieldText, InkRule, PadesScan,
-    PadesValidation, SignAppearance, SignOptions, SignatureCaption, Timestamper,
+    self, AddedAnnotation, BoxLook, Dss, EmbeddedFile, FieldMark, FieldText, InkRule, PadesScan,
+    PadesValidation, SignAppearance, SignOptions, SignatureCaption, StampLook, Timestamper,
 };
 use crate::schema;
 use crate::trust::{IdentityCheck, IdentityTrust, SigningTimeEvidence, TrustStore};
@@ -116,6 +116,13 @@ pub struct PrepareRequest {
     /// ([`Envelope::verify_at`], envelope schema version 7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verify_at: Option<String>,
+    /// Optional word and colour of the document-ID stamp ([`IdStamp`], [`check_stamp_word`]):
+    /// the stamp reads "<word> <envelope id>" on a box of that colour, and the word names the
+    /// product in the preparer's signature reason and the signers' one-time certificates. Part
+    /// of the prepared terms ([`Envelope::stamp`], envelope schema version 10). Absent: "SignPDF
+    /// Document <envelope id>" on a yellow box.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stamp: Option<IdStamp>,
 }
 
 /// A request to sign (or decline) a document.
@@ -539,6 +546,7 @@ fn validate_prepare_request(source_pdf: &[u8], request: &PrepareRequest) -> Resu
             signing_order: request.policy.signing_order,
             service_link: request.service_link.as_deref(),
             verify_at: request.verify_at.as_deref(),
+            stamp: request.stamp.as_ref(),
         },
         &geometry,
     )
@@ -569,6 +577,7 @@ struct PreparedTerms<'a> {
     signing_order: crate::model::SigningOrder,
     service_link: Option<&'a str>,
     verify_at: Option<&'a str>,
+    stamp: Option<&'a IdStamp>,
 }
 
 impl<'a> PreparedTerms<'a> {
@@ -585,6 +594,7 @@ impl<'a> PreparedTerms<'a> {
             signing_order: env.policy.signing_order,
             service_link: env.service_link.as_deref(),
             verify_at: env.verify_at.as_deref(),
+            stamp: env.stamp.as_ref(),
         }
     }
 }
@@ -810,7 +820,66 @@ fn check_prepared_terms(
     if let Some(address) = terms.verify_at {
         check_verify_at(address)?;
     }
+    if let Some(stamp) = terms.stamp {
+        check_stamp_word(&stamp.word)?;
+    }
     Ok(())
+}
+
+/// The longest stamp word accepted ([`check_stamp_word`]), in characters.
+pub const MAX_STAMP_WORD_LEN: usize = 24;
+
+/// The word of every document-ID stamp before envelope schema version 10, and of later ones
+/// whose preparer chose none ([`Envelope::stamp`]).
+pub const LEGACY_STAMP_WORD: &str = "SignPDF Document";
+
+/// The product a document names when its preparer chose no stamp word: in the preparer's
+/// signature reason and the signers' one-time certificates.
+pub const DEFAULT_PRODUCT_NAME: &str = "SignPDF";
+
+/// Check a stamp word ([`IdStamp::word`]): 1 to [`MAX_STAMP_WORD_LEN`] ASCII letters, digits and
+/// single spaces, starting and ending with a letter or digit, so that every viewer draws it the
+/// same way and it cannot imitate the envelope id or a second line.
+pub fn check_stamp_word(word: &str) -> std::result::Result<(), String> {
+    let bad = |why: &str| Err(format!("the stamp word '{word}' is not usable: {why}"));
+    if word.is_empty() || word.len() > MAX_STAMP_WORD_LEN {
+        return bad(&format!(
+            "write 1 to {MAX_STAMP_WORD_LEN} letters, digits or spaces"
+        ));
+    }
+    if !word.bytes().all(|b| b.is_ascii_alphanumeric() || b == b' ') {
+        return bad("it may hold only ASCII letters, digits and spaces");
+    }
+    if word.starts_with(' ') || word.ends_with(' ') || word.contains("  ") {
+        return bad("it must start and end with a letter or digit, with single spaces between");
+    }
+    Ok(())
+}
+
+/// The stamp `env` draws: its preparer's choice from envelope schema version 10, else none
+/// (the legacy stamp).
+fn chosen_stamp(env: &Envelope) -> Option<&IdStamp> {
+    env.stamp.as_ref().filter(|_| env.schema_version >= 10)
+}
+
+/// The product `env` names in the preparer's signature reason and the signers' one-time
+/// certificates: the stamp word its preparer chose, else [`DEFAULT_PRODUCT_NAME`].
+pub fn product_name(env: &Envelope) -> &str {
+    chosen_stamp(env).map_or(DEFAULT_PRODUCT_NAME, |s| s.word.as_str())
+}
+
+/// The colour of the document-ID stamp of `env`: its preparer's choice from envelope schema
+/// version 10, else yellow.
+pub fn document_id_color(env: &Envelope) -> StampColor {
+    chosen_stamp(env).map_or(StampColor::Yellow, |s| s.color)
+}
+
+/// The annotation title of the document-ID stamp of `env` (not checked by the verifier).
+fn document_id_title(env: &Envelope) -> String {
+    match chosen_stamp(env) {
+        Some(s) => format!("{} document ID", s.word),
+        None => pades::LEGACY_STAMP_TITLE.to_string(),
+    }
 }
 
 /// The longest 'verify at' address accepted, in characters.
@@ -856,11 +925,13 @@ pub fn check_verify_at(address: &str) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// The lines of the document-ID stamp of `env`: the document id and, from envelope schema version
-/// 7 when the preparer named one, the 'verify at' address. Versions before 7 always draw the
-/// first line alone, so their stamps verify unchanged.
+/// The lines of the document-ID stamp of `env`: the stamp word and the document id and, from
+/// envelope schema version 7 when the preparer named one, the 'verify at' address. Versions
+/// before 7 always draw the first line alone, and versions before 10 always the legacy word
+/// ([`LEGACY_STAMP_WORD`]), so their stamps verify unchanged.
 pub fn document_id_lines(env: &Envelope) -> Vec<String> {
-    let mut lines = vec![format!("SignPDF Document {}", env.envelope_id)];
+    let word = chosen_stamp(env).map_or(LEGACY_STAMP_WORD, |s| s.word.as_str());
+    let mut lines = vec![format!("{word} {}", env.envelope_id)];
     if env.schema_version >= 7 {
         if let Some(address) = &env.verify_at {
             lines.push(format!("Verify at {address}"));
@@ -1005,8 +1076,9 @@ fn prepare_inner(
         audit_log: Vec::new(),
         service_link: request.service_link.clone(),
         verify_at: request.verify_at.clone(),
-        // Every envelope this build prepares is of SCHEMA_VERSION (9), which names its rule.
+        // Every envelope this build prepares is of SCHEMA_VERSION (10), which names its rule.
         initials_rule: Some(InitialsRule::NameV1),
+        stamp: request.stamp.clone(),
     };
     tamper(&mut envelope);
 
@@ -1032,12 +1104,31 @@ fn prepare_inner(
     // Stamp a visible, read-only SignPDF document id onto the first page, then embed the envelope
     // and sign the result as the preparer, so the envelope's intent is fixed under the preparer's
     // verified identity before any signer sees it.
-    let stamped = pades::stamp_document_id_lines(source_pdf, &document_id_lines(&envelope))
-        .map_err(|e| SignPdfError::Workflow(format!("stamping document id failed: {e}")))?;
+    let lines = document_id_lines(&envelope);
+    let title = document_id_title(&envelope);
+    let first_page_fields: Vec<[f32; 4]> = envelope
+        .fields
+        .iter()
+        .filter(|f| f.page == 0)
+        .map(field_rect)
+        .collect();
+    let stamped = pades::stamp_document_id_with(
+        source_pdf,
+        &pades::StampDesign {
+            lines: &lines,
+            color: document_id_color(&envelope),
+            title: &title,
+            look: document_id_look(&envelope),
+            keep_clear: &first_page_fields,
+        },
+    )
+    .map_err(|e| SignPdfError::Workflow(format!("stamping document id failed: {e}")))?;
+    let product = product_name(&envelope);
     let opts = SignOptions {
         appearance: SignAppearance {
             name: actor_name,
-            reason: Some("Prepared for signing (SignPDF)".to_string()),
+            reason: Some(format!("Prepared for signing ({product})")),
+            organization: Some(format!("{product} Self-Signed")),
             ..Default::default()
         },
         embed: Some(envelope_attachment(&envelope)?),
@@ -1839,7 +1930,7 @@ fn sign_inner(
     // same increment so the signature's ByteRange covers them.
     let fingerprint = signer_key.fingerprint();
     let code = fingerprint.get(..8).unwrap_or(fingerprint.as_str());
-    let appearance = match kind {
+    let mut appearance = match kind {
         RecordKind::Signed => {
             let mut appearance = appearance_for(
                 &env,
@@ -1866,6 +1957,8 @@ fn sign_inner(
             ..Default::default()
         },
     };
+    // The one-time certificate names the product the preparing host named on the stamp.
+    appearance.organization = Some(format!("{} Self-Signed", product_name(&env)));
     let mut opts = SignOptions {
         appearance,
         embed: Some(envelope_attachment(&env)?),
@@ -2857,7 +2950,12 @@ fn check_preparer_revision(
                         {
                             problems.extend(coded(
                                 m::DOCUMENT_ID_STAMP_MISMATCH,
-                                pades::check_document_id_stamp_lines(a, &document_id_lines(env)),
+                                pades::check_document_id_stamp_with(
+                                    a,
+                                    &document_id_lines(env),
+                                    document_id_color(env),
+                                    document_id_look(env),
+                                ),
                             ));
                         }
                         _ => problems.push(Finding::new(
@@ -3347,6 +3445,7 @@ fn intent(env: &Envelope) -> serde_json::Value {
         })).collect::<Vec<_>>(),
         "verify_at": env.verify_at,
         "initials_rule": env.initials_rule,
+        "stamp": env.stamp,
     })
 }
 
@@ -3651,7 +3750,7 @@ fn check_signature_box(
     if rec.kind != RecordKind::Signed {
         return Vec::new();
     }
-    let caption = signature_caption(identity, code, &rec.signed_at);
+    let caption = signature_caption(env, identity, code, &rec.signed_at);
     added
         .iter()
         .filter(|a| a.subtype == "Widget" && a.field_type.as_deref() == Some("Sig"))
@@ -3676,12 +3775,37 @@ fn field_text(f: &Field) -> Option<FieldText> {
 
 /// The caption of a signer's signature box, from what the verifier has checked: the verified
 /// email, the signing key's code, the recorded signing time and the provider.
-fn signature_caption(identity: &VerifiedIdentity, code: &str, signed_at: &str) -> SignatureCaption {
+fn signature_caption(
+    env: &Envelope,
+    identity: &VerifiedIdentity,
+    code: &str,
+    signed_at: &str,
+) -> SignatureCaption {
     SignatureCaption {
         signer_name: display_name(identity),
         code: code.to_string(),
         signed_at: human_time(signed_at),
         issuer: issuer_label(&identity.issuer),
+        look: signature_look(env),
+    }
+}
+
+/// The layout of the signature boxes of `env`: from envelope schema version 11 the drawing is
+/// the hero with the details under it; before, the framed box with `Signed by:`.
+pub fn signature_look(env: &Envelope) -> BoxLook {
+    if env.schema_version >= 11 {
+        BoxLook::Hero
+    } else {
+        BoxLook::Framed
+    }
+}
+
+/// How the document-ID stamp of `env` is sized: measured from envelope schema version 11.
+pub fn document_id_look(env: &Envelope) -> StampLook {
+    if env.schema_version >= 11 {
+        StampLook::Measured
+    } else {
+        StampLook::Estimated
     }
 }
 
@@ -4720,7 +4844,7 @@ fn appearance_for(
         Some(f) => (f.page, Some(field_rect(f))),
         None => (0, None),
     };
-    let caption = rect.map(|_| signature_caption(identity, code, signed_at));
+    let caption = rect.map(|_| signature_caption(env, identity, code, signed_at));
     SignAppearance {
         name,
         reason,
@@ -4729,6 +4853,7 @@ fn appearance_for(
         rect,
         caption,
         ink: None,
+        organization: None,
     }
 }
 
@@ -4996,6 +5121,7 @@ mod tests {
             documents: Vec::new(),
             verify_at: None,
             initials_rule: Some(InitialsRule::NameV1),
+            stamp: None,
             signers: vec![Signer {
                 id: "s1".into(),
                 name: "Alice".into(),

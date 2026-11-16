@@ -103,6 +103,25 @@ if (c.code !== 0 || new TextDecoder().decode(c.out.slice(0, 5)) !== "%PDF-") {
   console.error("certificate failed");
   process.exit(1);
 }
+// A host names its own product in the certificate (title, footer, how to check the PDF).
+const named = call("signpdf_certificate_named", pdf, trust, encode("Example Verify"));
+const namedText = new TextDecoder("latin1").decode(named.out);
+// (The document's own data may still name SignPDF, such as the demo's test TSA; the certificate's
+// words must not.)
+const ownWords = ["SignPDF Certificate", "with SignPDF", "SignPDF certificate"];
+if (
+  named.code !== 0 ||
+  !namedText.includes("Example Verify Certificate of Completion") ||
+  !namedText.includes("Example Verify certificate of completion - page 1") ||
+  ownWords.some((w) => namedText.includes(w))
+) {
+  console.error("named certificate failed", named.code);
+  process.exit(1);
+}
+if (call("signpdf_certificate_named", pdf, trust, encode(" ")).code === 0) {
+  console.error("a blank product name was accepted");
+  process.exit(1);
+}
 const tampered = Uint8Array.from(pdf);
 tampered[20] ^= 0xff;
 const t = call("signpdf_verify", tampered, trust);

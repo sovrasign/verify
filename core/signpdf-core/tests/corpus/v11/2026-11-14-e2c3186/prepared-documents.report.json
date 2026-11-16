@@ -1,0 +1,210 @@
+{
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "original_len": 8946,
+  "document_sha256": "62a0d4d479b6fbc8746dddf27ebafd22a13c9e441464629f2c6f477458868950",
+  "complete": false,
+  "declined": false,
+  "audit_ok": true,
+  "order_ok": true,
+  "preparer": {
+    "index": 0,
+    "kind": "prepared",
+    "signer_id": "",
+    "actor_fingerprint": "5ec25c590e1cd3b6b138087ec3f3fa885be952aec8f17eaf13d7cffab6de9136",
+    "signed_at": "2026-11-14T20:37:58.7253319Z",
+    "time_source": "device",
+    "token_issued_at": "2026-11-14T20:37:53Z",
+    "valid": true,
+    "detail": "preparer signature valid; identity verified as alice@example.com via https://issuer.test",
+    "idp_email": "alice@example.com",
+    "idp_issuer": "https://issuer.test",
+    "level": "L2",
+    "basis": [
+      {
+        "method": "account",
+        "issuer": "https://issuer.test"
+      }
+    ],
+    "identity_trust": "insecure-dev",
+    "signature_code": "5ec25c59"
+  },
+  "signatures": [],
+  "messages": [],
+  "warnings": [
+    "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+  ],
+  "findings": [
+    {
+      "code": "insecure_dev_trust",
+      "severity": "warning",
+      "text": "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+    }
+  ],
+  "service_link": "https://sign.example.com/envelopes/demo-nda",
+  "pades_level": "B-B",
+  "algorithm_policy": {
+    "version": 1,
+    "source": "builtin"
+  },
+  "envelope": {
+    "schema_version": 11,
+    "envelope_id": "bf9a8dc289361f08b357a9a04e8694fc",
+    "title": "Services agreement with schedules",
+    "created_by": "alice@example.com",
+    "created_at": "2026-11-14T20:37:58.7253319Z",
+    "created_by_pubkey": "BHrf2BMDfGy9sz2o1PqLTGZsItcLpo6fDHzCm3iH1bDbl9N+0G3u0m9WTkbj4DpG65Q7Yo8smHkH7LZMcf0CkKI=",
+    "created_by_id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5NDY5MjI3OCwiaWF0IjoxNzk0Njg4NjczLCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiJjYmZjMDBlOWE3NmU5MzVlMWI4OTBhODQwYzE5YmQ5MjAwYWQ2ZDYzNzY3MjhlMjMxNmZmN2EwZDE0OTg4ZDQ3Iiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.H6uA3KcXuvL0PJM69rBLkA1LQ38AGp_jotZF-e-l6FymhFQ9FnQ8ke3mqLrtVGE6B1VlvvQnYGvFdWy_P2tqIA",
+    "created_by_idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"bkHubIVGBZmMX_4Iq-P0MxjQqvDVT1m21w8mZnaY7OU\",\"y\":\"vhXsfIt6lkWrOiJfCSOAPIgIqXRtw2cKRSVp6hZ4lJg\"}",
+    "created_by_issuer": "https://issuer.test",
+    "created_by_email": "alice@example.com",
+    "created_by_audience": "signpdf-cli-dev",
+    "source_digest": "6ed9875d102979df363b25684325d4abc8af91638d5fbe4f68620b50a3f93127",
+    "source_len": 2612,
+    "documents": [
+      {
+        "name": "Master services agreement.pdf",
+        "first_page": 0,
+        "page_count": 2,
+        "source_digest": "4c9eac6c198bfd0e184beda0431aac341772933e14fc34fe7b8bdf62751803bb"
+      },
+      {
+        "name": "Schedule A - fees.pdf",
+        "first_page": 2,
+        "page_count": 1,
+        "source_digest": "91a6d8928cb24ac6a8337cadea667de4c9a76aa1ea0ed3e005d337cbb830c59c"
+      },
+      {
+        "name": "Schedule B - data processing.pdf",
+        "first_page": 3,
+        "page_count": 2,
+        "source_digest": "d1a6539ecd1fccaed0caeb147d1f78849719c91d27baf00104b7b8f564bb1605"
+      }
+    ],
+    "signers": [
+      {
+        "id": "s1",
+        "name": "Alice Example",
+        "handle": "alice@example.com",
+        "role": "Provider",
+        "order": 1,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "alice@example.com",
+          "min_level": "L1"
+        }
+      },
+      {
+        "id": "s2",
+        "name": "Bob Builder",
+        "handle": "bob@example.com",
+        "role": "Customer",
+        "order": 1,
+        "status": "pending",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "bob@example.com",
+          "min_level": "L1"
+        }
+      }
+    ],
+    "fields": [
+      {
+        "id": "alice-sign",
+        "field_type": "signature",
+        "page": 1,
+        "rect": {
+          "x": 72.0,
+          "y": 120.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "bob-sign",
+        "field_type": "signature",
+        "page": 1,
+        "rect": {
+          "x": 72.0,
+          "y": 200.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "alice-initials",
+        "field_type": "initials",
+        "page": 2,
+        "rect": {
+          "x": 72.0,
+          "y": 300.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "bob-initials",
+        "field_type": "initials",
+        "page": 2,
+        "rect": {
+          "x": 72.0,
+          "y": 360.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "bob-ref",
+        "field_type": "text",
+        "page": 4,
+        "rect": {
+          "x": 72.0,
+          "y": 420.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "label": "Customer reference"
+      }
+    ],
+    "policy": {
+      "signing_order": "parallel",
+      "allowed_signature_types": [
+        "PAdES"
+      ],
+      "signature_timestamps": "required"
+    },
+    "signatures": [],
+    "audit_log": [
+      {
+        "seq": 0,
+        "action": "prepared",
+        "actor_fingerprint": "5ec25c590e1cd3b6b138087ec3f3fa885be952aec8f17eaf13d7cffab6de9136",
+        "actor_name": "alice@example.com",
+        "at": "2026-11-14T20:37:58.7253319Z",
+        "details": "prepared 'Services agreement with schedules' (3 documents) for 2 signer(s); preparer verified as alice@example.com via https://issuer.test",
+        "prev_hash": "GENESIS",
+        "entry_hash": "7a938d4deb9a4bf0a963538ec82af545d60ffa11376da1ab2010c8a4823746f1",
+        "signature": "MEYCIQCKtaN8scTjDrrNlP47gZvlMlAdMhjAf59+BztZYpiTVgIhALUHX5vzQVA6LFCYTtcdTJAJndAlXtGvhPwnCFA85NU7"
+      }
+    ],
+    "service_link": "https://sign.example.com/envelopes/demo-nda",
+    "verify_at": "verify.example.com",
+    "initials_rule": "name-v1"
+  }
+}

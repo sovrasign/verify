@@ -1,4 +1,4 @@
-# SignPDF security model (envelope schema v9)
+# SignPDF security model (envelope schema v11)
 
 This document describes what a SignPDF verification proves, what it relies on, and how each
 known attack is defeated. It reflects the code in `core/signpdf-core` (`workflow.rs`, `pades.rs`,
@@ -712,7 +712,8 @@ finding codes a verifier must give it (`core/signpdf-core/tests/attack/`, checke
 - **Approval, not certification, signatures.** Third-party PDF viewers apply their own
   modification-detection policies. SignPDF's own verifier enforces the stricter rules in §2.
 - **A drawn or typed signature is decoration.** It is supplied by the signer, drawn beside the
-  verified caption (`Signed by:`, email, key code), and proves nothing about who signed. A typed
+  verified caption (email, key code, time, provider: `Signed by:` before schema version 11), and
+  proves nothing about who signed. A typed
   signature is the outlines of whatever name the signer typed: the typed text is **not a claim**,
   the engine never records it as text, and nothing checks it against the verified identity. The
   verifier makes sure the drawing is pen strokes or filled paths in one colour that stay in their
@@ -801,7 +802,9 @@ verifiable for as long as anyone keeps it. The engine's rules are in
 | 6 | from 27 October 2026 | experimental, verified and signed: version 5 whose signature records keep the signer's drawing (`drawing`: pen strokes or a typed signature's filled paths), which the verifier redraws; refuses number fields and a `verify_at` address |
 | 7 | from 30 October 2026 | experimental, verified and signed: version 6 with number fields (`field_type` `number` and their `number_format`: decimal places, range, drawing style) and the optional `verify_at` address, which the document-ID stamp draws on a second line |
 | 8 | from 7 November 2026 | experimental, verified and signed: version 7 with checks on text fields (`value_format`, `length`, `check_message`), a currency in number formats, and formula fields; its initials stamps are the letters of the verified email address |
-| 9 | from 8 November 2026 | experimental, written by prepare (`SCHEMA_VERSION` = 9): version 8 with the required `initials_rule` (`name-v1`): initials stamps are the letters of the slot's name, which the preparer signs, else of the verified email address (`spec/envelope-format.md` §4.6) |
+| 9 | from 8 November 2026 | experimental, verified and signed (documents on hosted services that ran it keep their yellow "SignPDF Document" stamp and verify): version 8 with the required `initials_rule` (`name-v1`): initials stamps are the letters of the slot's name, which the preparer signs, else of the verified email address (`spec/envelope-format.md` §4.6) |
+| 10 | from 14 November 2026 | experimental, verified and signed (documents on hosted services that ran it keep their framed `Signed by:` signature boxes and verify): version 9 with the optional `stamp`: the word and colour (`yellow` or `green`) of the document-ID stamp, chosen by the preparing host and part of the prepared terms; the verifier redraws the stamp from it (`spec/envelope-format.md` §4.7) |
+| 11 | from 14 November 2026 | experimental, written by prepare (`SCHEMA_VERSION` = 11): the JSON of version 10; the signature box shows the drawing (or the email) large with `Sig <code> · <time> · via <Provider>` and the email in one small row under it, and the document-ID stamp's box is measured from Helvetica's widths (`spec/envelope-format.md` §4.7, §4.8) |
 | newer | a later build | refused with "unsupported version" (see below) |
 
 **Experimental until the first hosted release.** No document written before that release
@@ -847,7 +850,12 @@ These hold already, for every version:
 build of each supported version, each with that build's own verification report. Their reports
 from before assurance levels give `assurance` (`consumer`, `enterprise`); the corpus check reads
 it as the level today's verifier computes for the same identity (the test issuer is an account
-provider, so `consumer` is L2 and `enterprise` L3). The v9 set, 2026-11-08-d042bca, has the
+provider, so `consumer` is L2 and `enterprise` L3). The v11 set, 2026-11-14-e2c3186, has the
+documents of the v10 set drawn with version 11's signature box and measured stamp. The v10 set,
+2026-11-14-7256808, has the
+documents of the v9 set with a stamp word and colour the preparer chose (`Example` on green),
+except the envelope of several documents, which keeps the default yellow stamp. The v9 set,
+2026-11-08-d042bca, has the
 documents of the v8 set with the signers named in their slots, so their initials stamps come from
 the names (`AE`, `BB`). The v8 set, 2026-11-07-d13a087, has the documents of the v7 sets with
 checked text fields, an amount in a currency and a formula field. The second v7 set,
@@ -895,3 +903,5 @@ stable version are never regenerated.
 3. Commit, then run `scripts/make-schema-corpus.sh <that commit> <date>-<sha>` and commit the
    new `corpus/v<n+1>/` fixtures (`the_corpus_covers_every_supported_version` fails until then).
 4. Update the table above, and mark the version stable if this is the hosted release.
+5. Raise the engine's minor version and add its `CHANGELOG.md` entry, listing the versions it
+   verifies (`docs/RELEASES.md` §4; `scripts/check-engine-version.py` fails until then).

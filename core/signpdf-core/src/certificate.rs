@@ -7,7 +7,7 @@
 //! certificate names). It is a separate file because appending a page to the signed PDF would
 //! break the "last signature covers the whole file" rule.
 
-use crate::error::Result;
+use crate::error::{Result, SignPdfError};
 use crate::pades::winansi_literal;
 use crate::trust::TrustStore;
 use crate::workflow::{self, human_time, SignatureStatus, VerificationReport};
@@ -26,23 +26,54 @@ enum Line {
     Blank,
 }
 
+/// The product a certificate names when its host names none ([`completion_certificate_named`]).
+pub const DEFAULT_CERTIFICATE_PRODUCT: &str = "SignPDF";
+
+/// The longest product name a certificate accepts, in characters.
+pub const MAX_CERTIFICATE_PRODUCT_LEN: usize = 40;
+
 /// Verify `pdf` against `trust` and render a certificate of completion for it.
 pub fn completion_certificate(pdf: &[u8], trust: &TrustStore) -> Result<Vec<u8>> {
+    completion_certificate_named(pdf, trust, DEFAULT_CERTIFICATE_PRODUCT)
+}
+
+/// [`completion_certificate`] naming `product` (the host's product or verifier) in its title,
+/// its footer and where it says how to check the signed PDF. A name that is empty, longer than
+/// [`MAX_CERTIFICATE_PRODUCT_LEN`], not printable ASCII or padded with spaces is refused.
+pub fn completion_certificate_named(
+    pdf: &[u8],
+    trust: &TrustStore,
+    product: &str,
+) -> Result<Vec<u8>> {
+    if product.is_empty()
+        || product.len() > MAX_CERTIFICATE_PRODUCT_LEN
+        || !product.bytes().all(|b| (b' '..=b'~').contains(&b))
+        || product.trim() != product
+    {
+        return Err(SignPdfError::Workflow(format!(
+            "the certificate's product name must be 1 to {MAX_CERTIFICATE_PRODUCT_LEN} printable \
+             ASCII characters, without spaces around it"
+        )));
+    }
     let report = workflow::verify(pdf, trust)?;
-    Ok(render(&report))
+    Ok(render_named(&report, product))
 }
 
 /// Render a certificate from an existing verification report.
 pub fn render(report: &VerificationReport) -> Vec<u8> {
+    render_named(report, DEFAULT_CERTIFICATE_PRODUCT)
+}
+
+/// [`render`] naming `product` ([`completion_certificate_named`]).
+pub fn render_named(report: &VerificationReport, product: &str) -> Vec<u8> {
     let mut lines: Vec<Line> = Vec::new();
     let env = report.envelope.as_ref();
-    lines.push(Line::Title("SignPDF Certificate of Completion".into()));
+    lines.push(Line::Title(format!("{product} Certificate of Completion")));
     // Said first, not in the small print: this page carries no signature of its own.
-    lines.push(Line::Text(
+    lines.push(Line::Text(format!(
         "A summary, not proof: anyone can produce a page like this one. What proves the \
-         signatures is the signed PDF itself, checked with SignPDF."
-            .into(),
-    ));
+         signatures is the signed PDF itself, checked with {product}."
+    )));
     lines.push(Line::Blank);
     if let Some(env) = env {
         lines.push(Line::Text(format!("Document: {}", env.title)));
@@ -251,15 +282,14 @@ pub fn render(report: &VerificationReport) -> Vec<u8> {
         }
         lines.push(Line::Blank);
     }
-    lines.push(Line::Text(
+    lines.push(Line::Text(format!(
         "This certificate summarizes one verification of the signed PDF named above by its \
          SHA-256, with the trust settings of the computer that produced it. It is not itself \
-         signed: to rely on it, verify that signed PDF with SignPDF. Other PDF software can \
+         signed: to rely on it, verify that signed PDF with {product}. Other PDF software can \
          check that the file is intact, but not who signed it."
-            .into(),
-    ));
+    )));
 
-    layout_pdf(&lines)
+    layout_pdf(&lines, product)
 }
 
 /// A time-stamp authority's name, or `?`.
@@ -423,7 +453,7 @@ fn wrap(s: &str, width: usize) -> Vec<String> {
 }
 
 /// Lay out `lines` on US-Letter pages and serialize a complete PDF.
-fn layout_pdf(lines: &[Line]) -> Vec<u8> {
+fn layout_pdf(lines: &[Line], product: &str) -> Vec<u8> {
     // (font resource, size, text) per physical line, then paginate.
     let mut phys: Vec<(&str, f32, String)> = Vec::new();
     for l in lines {
@@ -476,7 +506,8 @@ fn layout_pdf(lines: &[Line]) -> Vec<u8> {
             y -= LINE;
         }
         cs.push_str(&format!(
-            "BT /F1 8 Tf {MARGIN} 30 Td (SignPDF certificate of completion - page {} of {}) Tj ET\n",
+            "BT /F1 8 Tf {MARGIN} 30 Td ({} certificate of completion - page {} of {}) Tj ET\n",
+            winansi_literal(product),
             i + 1,
             n_pages
         ));

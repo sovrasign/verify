@@ -72,7 +72,7 @@ fn a_typed_signature_is_filled_beside_the_verified_identity_and_recorded() {
     // The box: the verified caption, and the outlines filled in one colour, clipped to the
     // drawing area; no text in the drawing, no font but the standard one.
     let shown = signature_box(&signed, "alice@example.com");
-    assert!(shown.contains("(Signed by:) Tj"), "{shown}");
+    assert!(shown.contains(" \\267 via "), "{shown}");
     assert!(shown.contains("re\nW\nn\n0.05 0.05 0.30 rg\n"), "{shown}");
     assert!(
         shown.contains(" c\n") && shown.contains("\nh\nf\nQ\n"),
@@ -80,8 +80,8 @@ fn a_typed_signature_is_filled_beside_the_verified_identity_and_recorded() {
     );
     assert_eq!(
         shown.matches("BT\n").count(),
-        3,
-        "the caption's three rows only"
+        2,
+        "the details row's two parts only (Sig line, email)"
     );
     assert!(!String::from_utf8_lossy(&signed).contains("/FontFile"));
 

@@ -25,7 +25,8 @@ use signpdf_core::dates::DateFormat;
 use signpdf_core::initials::InitialsRule;
 use signpdf_core::ink::{PathSegment, SignatureDrawing};
 use signpdf_core::model::{
-    AuditAction, AuditEntry, EnvelopeDocument, EsignConsent, RecordKind, SignatureRecord,
+    AuditAction, AuditEntry, EnvelopeDocument, EsignConsent, IdStamp, RecordKind, SignatureRecord,
+    StampColor,
 };
 use signpdf_core::numbers::{NumberFormat, NumberStyle};
 use signpdf_core::oidc::{IdentityPolicy, Level, Method};
@@ -454,6 +455,11 @@ fn envelope() -> impl Strategy<Value = Envelope> {
             opt(text()),
             opt(text()),
             opt(Just(InitialsRule::NameV1)),
+            opt((
+                text(),
+                prop_oneof![Just(StampColor::Yellow), Just(StampColor::Green)],
+            )
+                .prop_map(|(word, color)| IdStamp { word, color })),
         ),
     )
         .prop_map(
@@ -483,6 +489,7 @@ fn envelope() -> impl Strategy<Value = Envelope> {
                     service_link,
                     verify_at,
                     initials_rule,
+                    stamp,
                 ),
             )| Envelope {
                 schema_version,
@@ -507,6 +514,7 @@ fn envelope() -> impl Strategy<Value = Envelope> {
                 service_link,
                 verify_at,
                 initials_rule,
+                stamp,
             },
         )
 }
@@ -649,6 +657,7 @@ proptest! {
             service_link: None,
             verify_at: None,
             initials_rule: Some(InitialsRule::NameV1),
+            stamp: None,
         };
         let expected: Vec<usize> = env
             .expected_signers()

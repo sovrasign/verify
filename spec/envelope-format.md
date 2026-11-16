@@ -1,9 +1,9 @@
 # SignPDF envelope format
 
 **Status:** experimental until the first hosted release (§13.1); open items in §14.
-**Envelope schema version:** 9 (the newest this specification describes).
+**Envelope schema version:** 11 (the newest this specification describes).
 **Oldest supported version:** 3.
-**Specification revision:** 9.0 (2026-11-08).
+**Specification revision:** 11.0 (2026-11-14).
 **Licence:** this text is licensed under CC BY 4.0 (`LICENSES/CC-BY-4.0.txt`); the test vectors
 it refers to are CC0 (`LICENSES/CC0-1.0.txt`).
 **Copyright:** 2026 Sovrasign LLC and contributors.
@@ -163,7 +163,9 @@ timestamp; their record's `signed_prefix_len` then includes it.
 
 ## 4. The envelope
 
-### 4.1 Members (schema version 9)
+### 4.1 Members (schema version 11)
+
+Version 11 has the members of version 10; it changes only what the engine draws (§4.8).
 
 | Member | Type | Prepared term | Meaning |
 | --- | --- | --- | --- |
@@ -187,6 +189,7 @@ timestamp; their record's `signed_prefix_len` then includes it.
 | `service_link` | string | **no** | OPTIONAL `https` URL that opens the envelope in the service that sent it (§7.5) |
 | `verify_at` | string | yes | from version 7, OPTIONAL: a short verifier address (no scheme, 40 characters at most) the document-ID stamp draws as "Verify at …" |
 | `initials_rule` | string | yes | from version 9, REQUIRED: the rule that derives the letters stamped in a signer's further initials fields (§4.6); `name-v1` is the only value. Absent before version 9, where the email rule applies |
+| `stamp` | object | yes | from version 10, OPTIONAL: the document-ID stamp's `word` (1 to 24 ASCII letters, digits and single spaces, starting and ending with a letter or digit) and `color` (`yellow` or `green`), chosen by the preparing host (§4.7). Absent (always, before version 10): the word `SignPDF Document` on yellow |
 
 A writer MUST NOT add members this table does not list for its version. A reader MUST decode a
 supported version **without loss**: every member it does not understand is an error, never
@@ -196,7 +199,7 @@ silently dropped, because a dropped member would escape the comparison of prepar
 
 The prepared terms are: `schema_version`, `envelope_id`, `title`, every `created_*` member,
 `source_digest`, `source_len`, `documents`, `policy` (including `signature_timestamps`),
-`verify_at`, `initials_rule`, each slot's members except `status`, `public_key` and `fingerprint`, and each
+`verify_at`, `initials_rule`, `stamp`, each slot's members except `status`, `public_key` and `fingerprint`, and each
 field's members except `value`. Revision 0 sets them; every later revision MUST carry them
 unchanged (`terms_changed`).
 
@@ -328,6 +331,47 @@ these letters; `spec/vectors/initials-name-v1.json` holds the test vectors (§12
 alone: the first and last of the non-empty parts of the part before its first `@`, split at
 every character that is neither a letter nor a digit, each giving its first letter or digit in
 capitals (no font restriction); nothing gives `?`. These versions' documents keep that rule.
+
+### 4.7 The document-ID stamp (`stamp`, version 10 and later)
+
+Revision 0 draws a document-ID stamp on the first page: a `/Stamp` annotation named
+`/SignPDFDocID`, flagged `/F 196`, carrying its own appearance. Its first line is the stamp word,
+a space and `envelope_id`; from version 7 a second line reads `Verify at <verify_at>` when the
+envelope names an address. The word and the box colour come from `stamp`; without it (and in
+every version before 10) the word is `SignPDF Document` and the box yellow. The verifier redraws
+the stamp from the envelope and compares text, size and appearance bytes, so a document keeps
+the stamp it was prepared with for life.
+
+| `color` | fill (`rg`) | border (`RG`) |
+| --- | --- | --- |
+| `yellow` | `0.96 0.96 0.86` | `0.55 0.5 0.2` |
+| `green` | `0.89 0.96 0.9` | `0.18 0.49 0.31` |
+
+The text is always grey `0.15` (contrast about 13:1 on either fill). Not checked by the verifier,
+and so free for the preparing host: the annotation's `/T` (`<word> document ID`, or `SignPDF
+Document ID` without a chosen word), the preparer's signature `/Reason` (`Prepared for signing
+(<word>)`, or `(SignPDF)`) and the organization of every one-time signing certificate
+(`<word> Self-Signed`, or `SignPDF Self-Signed`).
+
+From version 11 the stamp's box is sized from the standard Helvetica advance widths of its lines
+at 8 pt, plus 4 pt on either side, rounded up to a hundredth of a point; before, it was half an
+em per character, which could be narrower than a line of wide letters. Where the stamp sits on
+the first page is not part of the format (the verifier checks its text, size and appearance, not
+its position): the reference writer puts it in the first spot of the bottom or top margin where
+the page draws nothing and no field of the envelope lies, and in the lower-left corner, 18 pt from
+the edges, when no spot is free.
+
+### 4.8 Signature boxes (version 11 and later)
+
+A signer's visible signature box has two layouts. Before version 11 it is framed and grey: the
+drawing in its left 40 %, and three rows at the right: `Signed by:`, the verified email (large)
+and `Sig <code>  <time>  via <provider>`. From version 11 it has no fill and no frame: the
+drawing (or, without one, the verified email in black, up to 18 pt) takes the whole width above a
+thin grey baseline, and one small grey row under it reads `Sig <code> · <time> · via <Provider>`
+(`Google`, `Microsoft`, `Apple`, else the issuer's host) with the verified email at its right.
+When that row would be smaller than 5 pt, the email goes on its own row above the `Sig` line,
+cut in the middle with `…` when it does not fit. The exact drawing is the reference
+implementation's (`pades.rs`, `hero_box`), and the verifier compares it byte for byte (§7.3).
 
 ## 5. Identity binding
 
@@ -664,7 +708,7 @@ signing MUST give the same letters for every case.
 The rules are those of `docs/SECURITY_MODEL.md` §8. In short: an envelope keeps its version for
 life; a build never signs a newer version; every **stable** version from the oldest supported
 to the newest verifies forever, each under its own rules; any change to a stable version's shape
-or to what a revision may contain is a new version. Versions up to and including 9 are
+or to what a revision may contain is a new version. Versions up to and including 11 are
 **experimental** until the first hosted release fixes its version as the first stable one; an
 experimental version may change in place and its corpus fixtures are then replaced.
 
@@ -677,6 +721,8 @@ experimental version may change in place and its corpus fixtures are then replac
 | 7 | `number` fields with `number_format`, and `verify_at` |
 | 8 | `value_format`, `length` and `check_message` on fields, `number_format.currency`, and `formula` fields |
 | 9 | `initials_rule` (`name-v1`): initials stamps from the slot's name instead of the verified email address |
+| 10 | `stamp`: the word and colour of the document-ID stamp, chosen by the preparing host |
+| 11 | no new member: the signature box shows the drawing large with the details under it (§4.8), and the document-ID stamp's box is measured from Helvetica's widths (§4.7) |
 
 ### 13.2 Unknown versions
 

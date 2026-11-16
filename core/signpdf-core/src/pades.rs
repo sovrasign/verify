@@ -54,6 +54,7 @@ use x509_cert::Certificate;
 
 use crate::crypto::KeyPair;
 use crate::error::{Result, SignPdfError};
+use crate::model::StampColor;
 use crate::util::{now_pdf_date, now_unix};
 
 /// Hex characters reserved for the `/Contents` placeholder of a signature without a timestamp,
@@ -467,8 +468,8 @@ fn shrink_large_image(obj: &mut Object, images: ImageBytes) {
     }
 }
 
-/// Text rendered into a visible signature appearance: a `Signed by:` label above the signer's
-/// name, and a footer line carrying the verification `code`, signing time, and provider.
+/// Text rendered into a visible signature appearance: the signer's name, and a footer line
+/// carrying the verification `code`, signing time, and provider, laid out as `look` says.
 #[derive(Debug, Clone)]
 pub struct SignatureCaption {
     /// Verified signer name (or email) shown beneath the `Signed by:` label.
@@ -479,6 +480,21 @@ pub struct SignatureCaption {
     pub signed_at: String,
     /// Identity-provider label, e.g. `google`.
     pub issuer: String,
+    /// How the box is laid out ([`BoxLook`]).
+    pub look: BoxLook,
+}
+
+/// The layout of a visible signature box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BoxLook {
+    /// Every signature before envelope schema version 11: a framed grey box, the drawing in its
+    /// left 40%, and three rows at the right: `Signed by:`, the name (large) and the footer.
+    #[default]
+    Framed,
+    /// From envelope schema version 11: the drawing (or, without one, the name) large across the
+    /// whole box over a thin baseline, and one small grey row under it: `Sig <code> · <time> ·
+    /// via <provider>` at the left and the name at the right (two rows when one does not fit).
+    Hero,
 }
 
 /// Where and how a signature is shown in the page.
@@ -500,7 +516,14 @@ pub struct SignAppearance {
     /// the left of the visible appearance, which keeps the verified caption. Ignored without a
     /// `caption`, and when it cannot be drawn ([`SignatureDrawing::validate`]).
     pub ink: Option<SignatureDrawing>,
+    /// The organization (`O=`) of the one-time signing certificate; `None` writes
+    /// [`DEFAULT_CERT_ORGANIZATION`]. Shown in a PDF viewer's signature properties, never
+    /// checked by the verifier.
+    pub organization: Option<String>,
 }
+
+/// The organization of a one-time signing certificate when the host names none.
+pub const DEFAULT_CERT_ORGANIZATION: &str = "SignPDF Self-Signed";
 
 impl Default for SignAppearance {
     fn default() -> Self {
@@ -512,6 +535,7 @@ impl Default for SignAppearance {
             rect: None,
             caption: None,
             ink: None,
+            organization: None,
         }
     }
 }
@@ -765,7 +789,13 @@ pub fn pades_sign_increment(
     // envelope is located by scanning the embedded Filespecs — see `read_attachment`.)
 
     // Self-signed certificate for this signer.
-    let cert = self_signed_cert(signer, &app.name)?;
+    let cert = self_signed_cert(
+        signer,
+        &app.name,
+        app.organization
+            .as_deref()
+            .unwrap_or(DEFAULT_CERT_ORGANIZATION),
+    )?;
 
     // Everything needed from the parsed document has been copied out (only the trailer is used
     // below). Free it before building the output, so the parse and the output copy of a large
@@ -1235,6 +1265,53 @@ pub fn stamp_document_id(pdf: &[u8], label: &str) -> Result<Vec<u8>> {
 /// envelope schema version 7, the 'verify at' address: [`crate::workflow::document_id_lines`]).
 /// One line draws exactly what [`stamp_document_id`] draws.
 pub fn stamp_document_id_lines(pdf: &[u8], lines: &[String]) -> Result<Vec<u8>> {
+    stamp_document_id_with(
+        pdf,
+        &StampDesign {
+            lines,
+            color: StampColor::Yellow,
+            title: LEGACY_STAMP_TITLE,
+            look: StampLook::Estimated,
+            keep_clear: &[],
+        },
+    )
+}
+
+/// The annotation title (`/T`, shown as the author in a viewer's comments list) of every stamp
+/// before envelope schema version 10, and of later ones without a chosen word.
+pub const LEGACY_STAMP_TITLE: &str = "SignPDF Document ID";
+
+/// Everything a document-id stamp shows ([`stamp_document_id_with`]): its lines, the box colour,
+/// the annotation title, how its width is found, and the areas of the first page it must leave
+/// clear. The lines, the colour and the look are checked by the verifier; the title and the spot
+/// the stamp takes are not.
+#[derive(Debug, Clone)]
+pub struct StampDesign<'a> {
+    pub lines: &'a [String],
+    pub color: StampColor,
+    pub title: &'a str,
+    pub look: StampLook,
+    /// Rectangles `[x1, y1, x2, y2]` of the first page the stamp must not cover (the envelope's
+    /// fields there), besides what the page already draws.
+    pub keep_clear: &'a [[f32; 4]],
+}
+
+/// How the document-id stamp's box is sized around its lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StampLook {
+    /// Every stamp before envelope schema version 11: half an em per character, which is too
+    /// narrow for wide letters, so a long id could run past the box's right edge.
+    #[default]
+    Estimated,
+    /// From envelope schema version 11: each line measured with Helvetica's own widths, with the
+    /// same padding on both sides.
+    Measured,
+}
+
+/// [`stamp_document_id_lines`] in a chosen colour and with a chosen annotation title
+/// (envelope schema version 10: [`crate::workflow::document_id_design`]).
+pub fn stamp_document_id_with(pdf: &[u8], design: &StampDesign) -> Result<Vec<u8>> {
+    let lines = design.lines;
     if !pdf.starts_with(b"%PDF-") {
         return Err(pades("input is not a PDF"));
     }
@@ -1269,10 +1346,19 @@ pub fn stamp_document_id_lines(pdf: &[u8], lines: &[String]) -> Result<Vec<u8>> 
     let ap_id = alloc();
     let font_id = alloc();
 
-    let stamp = document_id_stamp(lines);
+    let stamp = document_id_stamp(lines, design.color, design.look);
     let (text, box_w, box_h) = (&stamp.text, stamp.w, stamp.h);
-    let x0 = media[0] + 18.0;
-    let y0 = media[1] + 18.0;
+    // Where the page draws nothing (and no field will be), within what a viewer shows.
+    let visible = page_crop_box(&doc, page_id, media);
+    let mut taken = crate::placement::painted_boxes(&doc, page_id);
+    if let Some(taken) = taken.as_mut() {
+        taken.extend_from_slice(design.keep_clear);
+        taken.extend(page_annotation_rects(&doc, &page));
+    }
+    let (x0, y0) = match taken {
+        Some(taken) => crate::placement::stamp_spot(visible, box_w, box_h, &taken),
+        None => (media[0] + 18.0, media[1] + 18.0),
+    };
     let x1 = x0 + box_w;
     let y1 = y0 + box_h;
 
@@ -1281,12 +1367,13 @@ pub fn stamp_document_id_lines(pdf: &[u8], lines: &[String]) -> Result<Vec<u8>> 
 
     let annot_body = format!(
         "<< /Type /Annot /Subtype /Stamp /Rect [{} {} {} {}] /F 196 /P {} 0 R \
-         /Name /SignPDFDocID /T (SignPDF Document ID) /Contents ({}) /AP << /N {} 0 R >> >>",
+         /Name /SignPDFDocID /T ({}) /Contents ({}) /AP << /N {} 0 R >> >>",
         fmt_num(x0),
         fmt_num(y0),
         fmt_num(x1),
         fmt_num(y1),
         page_id.0,
+        esc_pdf_str(&ascii_caption(design.title, 64)),
         esc_pdf_str(text),
         ap_id.0,
     );
@@ -1345,22 +1432,37 @@ struct DocumentIdStamp {
 /// stamp: the preparer writes it and the verifier compares against it. One line is the stamp of
 /// every envelope before schema version 7 (and of later ones without a 'verify at' address), and
 /// must keep drawing byte for byte what it always drew; more lines stack from the top, and the
-/// annotation's text joins them with " - ".
-fn document_id_stamp(lines: &[String]) -> DocumentIdStamp {
+/// annotation's text joins them with " - ". `color` picks the box's fill and border from the
+/// fixed palette ([`stamp_palette`]); yellow draws what every stamp before envelope schema
+/// version 10 drew.
+fn document_id_stamp(lines: &[String], color: StampColor, look: StampLook) -> DocumentIdStamp {
+    let (fill, border) = stamp_palette(color);
     let font_size = 8.0_f32;
     let pad = 4.0_f32;
     let rows: Vec<String> = lines.iter().map(|l| ascii_caption(l, 64)).collect();
-    let longest = rows.iter().map(String::len).max().unwrap_or(0);
-    let box_w = (longest as f32) * (font_size * 0.5) + 2.0 * pad;
+    let box_w = match look {
+        StampLook::Estimated => {
+            let longest = rows.iter().map(String::len).max().unwrap_or(0);
+            (longest as f32) * (font_size * 0.5) + 2.0 * pad
+        }
+        // Rounded up to a hundredth, as the box is written.
+        StampLook::Measured => {
+            let widest = rows
+                .iter()
+                .map(|r| text_width(r, font_size))
+                .fold(0.0_f32, f32::max);
+            ((widest + 2.0 * pad) * 100.0).ceil() / 100.0
+        }
+    };
     if rows.len() <= 1 {
         let text = rows.into_iter().next().unwrap_or_default();
         let box_h = font_size + 2.0 * pad;
         let content = format!(
             "q
-0.96 0.96 0.86 rg
+{fill} rg
 0 0 {bw} {bh} re
 f
-0.55 0.5 0.2 RG
+{border} RG
 0.8 w
 0.5 0.5 {bwi} {bhi} re
 S
@@ -1415,10 +1517,10 @@ Q
     }
     let content = format!(
         "q
-0.96 0.96 0.86 rg
+{fill} rg
 0 0 {bw} {bh} re
 f
-0.55 0.5 0.2 RG
+{border} RG
 0.8 w
 0.5 0.5 {bwi} {bhi} re
 S
@@ -1439,6 +1541,16 @@ Q
         w: box_w,
         h: box_h,
         content,
+    }
+}
+
+/// The fill and border colours (`rg`/`RG` operands) of a document-id stamp. The text is always
+/// dark grey (0.15), which reads at about 13:1 on either fill; the green border keeps about 4:1
+/// against its fill. Never change an entry: the verifier redraws old stamps from it.
+fn stamp_palette(color: StampColor) -> (&'static str, &'static str) {
+    match color {
+        StampColor::Yellow => ("0.96 0.96 0.86", "0.55 0.5 0.2"),
+        StampColor::Green => ("0.89 0.96 0.9", "0.18 0.49 0.31"),
     }
 }
 
@@ -1496,7 +1608,11 @@ fn attachment_in(doc: &Document, name: &str) -> Result<Vec<u8>> {
     attachment_bytes(stream)
 }
 
-fn self_signed_cert(signer: &KeyPair, common_name: &str) -> Result<Certificate> {
+fn self_signed_cert(
+    signer: &KeyPair,
+    common_name: &str,
+    organization: &str,
+) -> Result<Certificate> {
     let signing: &SigningKey = signer.signing_key();
     let spki = SubjectPublicKeyInfoOwned::from_key(signing.verifying_key())
         .map_err(|e| pades(format!("spki: {e}")))?;
@@ -1514,7 +1630,11 @@ fn self_signed_cert(signer: &KeyPair, common_name: &str) -> Result<Certificate> 
         time(now)?,
         time(now + Duration::from_secs(60 * 60 * 24 * 3650))?,
     );
-    let dn = format!("CN={},O=SignPDF Self-Signed", sanitize_dn(common_name));
+    let dn = format!(
+        "CN={},O={}",
+        sanitize_dn(common_name),
+        sanitize_dn(organization)
+    );
     let subject: Name = dn.parse().map_err(|e| pades(format!("dn: {e}")))?;
     let builder = CertificateBuilder::new(SelfSignedLeaf(subject), serial, validity, spki)
         .map_err(|e| pades(format!("cert builder: {e}")))?;
@@ -3782,7 +3902,18 @@ pub fn check_document_id_stamp(a: &AddedAnnotation, label: &str) -> Vec<String> 
 /// [`check_document_id_stamp`] for a stamp of several lines
 /// ([`crate::workflow::document_id_lines`]).
 pub fn check_document_id_stamp_lines(a: &AddedAnnotation, lines: &[String]) -> Vec<String> {
-    let stamp = document_id_stamp(lines);
+    check_document_id_stamp_with(a, lines, StampColor::Yellow, StampLook::Estimated)
+}
+
+/// [`check_document_id_stamp_lines`] for a stamp drawn in `color` (envelope schema version 10)
+/// and sized as `look` says (version 11). Where the stamp sits on the page is not checked.
+pub fn check_document_id_stamp_with(
+    a: &AddedAnnotation,
+    lines: &[String],
+    color: StampColor,
+    look: StampLook,
+) -> Vec<String> {
+    let stamp = document_id_stamp(lines, color, look);
     let (w, h) = (a.rect[2] - a.rect[0], a.rect[3] - a.rect[1]);
     let ok = a.flags == Some(196)
         && a.contents.as_deref() == Some(stamp.text.as_str())
@@ -4165,6 +4296,30 @@ pub struct PageGeometry {
     pub annotations: Vec<ExistingAnnotation>,
 }
 
+/// The part of `page` a viewer shows: its effective `CropBox` within `media`, else `media`.
+fn page_crop_box(doc: &Document, page: ObjectId, media: [f32; 4]) -> [f32; 4] {
+    normalized_box(doc, inherited(doc, page, b"CropBox"))
+        .map(|c| {
+            [
+                c[0].max(media[0]),
+                c[1].max(media[1]),
+                c[2].min(media[2]),
+                c[3].min(media[3]),
+            ]
+        })
+        .filter(|c| c[0] < c[2] && c[1] < c[3])
+        .unwrap_or(media)
+}
+
+/// The rectangles of the annotations `page` already has (form fields, links, notes).
+fn page_annotation_rects(doc: &Document, page: &Dictionary) -> Vec<[f32; 4]> {
+    resolved_vec(doc, page.get(b"Annots").ok())
+        .iter()
+        .filter_map(|a| resolve(doc, a).and_then(|o| o.as_dict().ok()))
+        .filter_map(|ad| normalized_box(doc, ad.get(b"Rect").ok()))
+        .collect()
+}
+
 /// Look up an inheritable page attribute (`MediaBox`, `CropBox`, `Rotate`) through `/Parent`.
 fn inherited<'a>(doc: &'a Document, page: ObjectId, key: &[u8]) -> Option<&'a Object> {
     let mut current = Some(page);
@@ -4311,6 +4466,14 @@ struct SignatureBox {
 /// signer's drawing at its left. The single definition of the box: the signer writes it and
 /// the verifier compares against it.
 fn signature_box(w: f32, h: f32, caption: &SignatureCaption, with_ink: bool) -> SignatureBox {
+    match caption.look {
+        BoxLook::Framed => framed_box(w, h, caption, with_ink),
+        BoxLook::Hero => hero_box(w, h, caption, with_ink),
+    }
+}
+
+/// [`BoxLook::Framed`]: never change it, the verifier redraws old signatures from it.
+fn framed_box(w: f32, h: f32, caption: &SignatureCaption, with_ink: bool) -> SignatureBox {
     let pad = 4.0_f32;
     // The drawing gets 40% of the width; the caption starts after it.
     let ink_w = if with_ink {
@@ -4363,6 +4526,145 @@ fn signature_box(w: f32, h: f32, caption: &SignatureCaption, with_ink: bool) -> 
         head,
         tail,
         ink_box: [pad, 3.0, ink_w, (h - 6.0).max(0.0)],
+    }
+}
+
+/// A number for the drawn content, rounded to a hundredth (so a size reads `7.2`, not
+/// `7.2000003`).
+fn r2(v: f32) -> String {
+    fmt_num((v * 100.0).round() / 100.0)
+}
+
+/// `s` cut in the middle with an ellipsis (`…`) so it is no wider than `width` at `size`
+/// points; `s` itself when it fits. An email keeps its start and its domain's end.
+fn truncate_middle(s: &str, size: f32, width: f32) -> String {
+    if text_width(s, size) <= width {
+        return s.to_string();
+    }
+    let chars: Vec<char> = s.chars().collect();
+    let mut keep = chars.len();
+    while keep > 1 {
+        keep -= 1;
+        let head = keep.div_ceil(2);
+        let tail = keep / 2;
+        let cut: String = chars[..head]
+            .iter()
+            .chain(std::iter::once(&'\u{2026}'))
+            .chain(&chars[chars.len() - tail..])
+            .collect();
+        if text_width(&cut, size) <= width {
+            return cut;
+        }
+    }
+    "\u{2026}".to_string()
+}
+
+/// The provider as the [`BoxLook::Hero`] footer names it: known providers capitalised.
+fn hero_issuer(issuer: &str) -> String {
+    match issuer {
+        "google" => "Google".into(),
+        "microsoft" => "Microsoft".into(),
+        "apple" => "Apple".into(),
+        other => other.to_string(),
+    }
+}
+
+/// [`BoxLook::Hero`]: no fill and no frame, so it reads as ink on the page; the drawing (or the
+/// name) over a thin baseline; the details in one small grey row under it (#555 or darker, for
+/// print and contrast), never below 5 pt where the box allows.
+fn hero_box(w: f32, h: f32, caption: &SignatureCaption, with_ink: bool) -> SignatureBox {
+    let pad = 3.0_f32;
+    let inner = (w - 2.0 * pad).max(1.0);
+    let grey = "0.33 0.33 0.33 rg";
+    let name = drawable_caption(&caption.signer_name, 72);
+    let sig = drawable_caption(
+        &format!(
+            "Sig {} \u{b7} {} \u{b7} via {}",
+            caption.code,
+            caption.signed_at,
+            hero_issuer(&caption.issuer)
+        ),
+        72,
+    );
+    // The details row: the Sig line at the left and, with a drawing, the name at the right.
+    // Without a drawing the name is the hero itself, so the row holds the Sig line alone.
+    let base = (h * 0.16).clamp(6.0, 8.0);
+    let gap = 2.0 * base;
+    let mut rows: Vec<(String, f32, bool)> = Vec::new(); // (text, size, right-aligned)
+    let one_row = |size: f32| text_width(&sig, size) + gap + text_width(&name, size);
+    let size = if with_ink {
+        let fits = (base * inner / one_row(base)).min(base);
+        if fits >= 5.0 {
+            rows.push((sig.clone(), fits, false));
+            rows.push((name.clone(), fits, true));
+            fits
+        } else {
+            // Two rows: the name above the Sig line, cut when needed, small enough that the
+            // details take under half the box (never below 4 pt).
+            let two = base.min((0.45 * h - 2.0) / 2.0 - 1.5).max(4.0);
+            rows.push((truncate_middle(&name, two, inner), two, false));
+            rows.push((sig.clone(), fit_size(&sig, two, inner), false));
+            two
+        }
+    } else {
+        let size = fit_size(&sig, base, inner);
+        rows.push((sig.clone(), size, false));
+        size
+    };
+    let stacked = rows.iter().filter(|r| !r.2).count() as f32;
+    let leading = size + 1.5;
+    let band = ((2.0 + leading * stacked) * 100.0).round() / 100.0;
+    let mut tail = String::new();
+    // The hero without a drawing: the name, as large as the area allows (up to 18 pt).
+    let area_y = band + 2.0;
+    let area_h = (h - area_y - pad).max(0.0);
+    if !with_ink {
+        let hero = fit_size(&name, (area_h * 0.75).clamp(6.0, 18.0), inner);
+        let hy = area_y + ((area_h - hero * 0.72) / 2.0).max(0.0);
+        tail.push_str(&format!(
+            "BT\n/Helv {} Tf\n0 0 0 rg\n{} {} Td\n({}) Tj\nET\n",
+            r2(hero),
+            r2(pad),
+            r2(hy),
+            winansi_literal(&name),
+        ));
+    }
+    // Rows from the top of the band down; a right-aligned row shares the last left row's line.
+    let mut line = 0.0_f32;
+    for (text, sz, right) in &rows {
+        if !right {
+            line += 1.0;
+        }
+        let y = band - leading * line + 1.5;
+        let x = if *right {
+            (w - pad - text_width(text, *sz)).max(pad)
+        } else {
+            pad
+        };
+        tail.push_str(&format!(
+            "BT\n/Helv {} Tf\n{grey}\n{} {} Td\n({}) Tj\nET\n",
+            r2(*sz),
+            r2(x),
+            r2(y),
+            winansi_literal(text),
+        ));
+    }
+    tail.push_str("Q\n");
+    let head = format!(
+        "q\n0.6 0.6 0.6 RG\n0.5 w\n{} {} m\n{} {} l\nS\n",
+        r2(pad),
+        r2(band),
+        r2(w - pad),
+        r2(band),
+    );
+    SignatureBox {
+        head,
+        tail,
+        ink_box: if with_ink {
+            [pad, area_y, inner, area_h]
+        } else {
+            [pad, area_y, 0.0, area_h]
+        },
     }
 }
 
@@ -5070,12 +5372,107 @@ mod appearance_tests {
         }
     }
 
+    /// The exact bytes of envelope schema version 11's signature box and document-ID stamp. As
+    /// for the older drawings below, a change here makes every document signed with them fail
+    /// verification: add a new look instead.
+    #[test]
+    fn version_11_draws_the_hero_box_and_a_measured_stamp() {
+        let hero = SignatureCaption {
+            look: BoxLook::Hero,
+            issuer: "microsoft".into(),
+            ..caption()
+        };
+        let sig = r"(Sig 9f1629a7 \267 2026-10-10 13:27 UTC \267 via Microsoft) Tj";
+        // Without a drawing: the name large, the Sig line alone under the baseline.
+        let plain = signature_box(220.0, 40.0, &hero, false);
+        assert_eq!(
+            plain.head,
+            "q\n0.6 0.6 0.6 RG\n0.5 w\n3 9.9 m\n217 9.9 l\nS\n"
+        );
+        assert_eq!(
+            plain.tail,
+            format!(
+                "BT\n/Helv 18 Tf\n0 0 0 rg\n3 17.97 Td\n(bob@example.com) Tj\nET\n\
+                 BT\n/Helv 6.4 Tf\n0.33 0.33 0.33 rg\n3 3.5 Td\n{sig}\nET\nQ\n"
+            )
+        );
+        // With a drawing: it takes the whole width above the baseline; the details share one
+        // row, the Sig line at the left and the name at the right.
+        let inked = signature_box(220.0, 40.0, &hero, true);
+        assert_eq!(
+            inked.head,
+            "q\n0.6 0.6 0.6 RG\n0.5 w\n3 9.79 m\n217 9.79 l\nS\n"
+        );
+        assert_eq!(inked.ink_box, [3.0, 11.79, 214.0, 25.21]);
+        assert_eq!(
+            inked.tail,
+            format!(
+                "BT\n/Helv 6.29 Tf\n0.33 0.33 0.33 rg\n3 3.5 Td\n{sig}\nET\n\
+                 BT\n/Helv 6.29 Tf\n0.33 0.33 0.33 rg\n162.73 3.5 Td\n(bob@example.com) Tj\nET\nQ\n"
+            )
+        );
+        // A narrow box: the name on its own row above the Sig line, the drawing still the
+        // larger part.
+        let narrow = signature_box(100.0, 30.0, &hero, true);
+        assert_eq!(
+            narrow.head,
+            "q\n0.6 0.6 0.6 RG\n0.5 w\n3 13.5 m\n97 13.5 l\nS\n"
+        );
+        assert_eq!(narrow.ink_box, [3.0, 15.5, 94.0, 11.5]);
+        assert_eq!(
+            narrow.tail,
+            format!(
+                "BT\n/Helv 4.25 Tf\n0.33 0.33 0.33 rg\n3 9.25 Td\n(bob@example.com) Tj\nET\n\
+                 BT\n/Helv 4.02 Tf\n0.33 0.33 0.33 rg\n3 3.5 Td\n{sig}\nET\nQ\n"
+            )
+        );
+        // The framed look is unchanged for the same caption.
+        assert_eq!(
+            signature_box(220.0, 40.0, &caption(), false).head,
+            framed_box(220.0, 40.0, &caption(), false).head
+        );
+
+        // The stamp measured with Helvetica's widths: the whole id fits, 4 pt on either side.
+        let lines = [
+            "Sovrasign 0123456789abcdef0123456789abcdef".to_string(),
+            "Verify at dev.sovrasign.com/verify".to_string(),
+        ];
+        let stamp = document_id_stamp(&lines, StampColor::Green, StampLook::Measured);
+        assert_eq!((stamp.w, stamp.h), (182.79, 26.0));
+        assert!(text_width(&lines[0], 8.0) + 8.0 <= stamp.w);
+        assert_eq!(
+            stamp.content,
+            "q\n0.89 0.96 0.9 rg\n0 0 182.79 26 re\nf\n0.18 0.49 0.31 RG\n0.8 w\n\
+             0.5 0.5 181.79 25 re\nS\nBT\n/Helv 8 Tf\n0.15 0.15 0.15 rg\n4 15 Td\n\
+             (Sovrasign 0123456789abcdef0123456789abcdef) Tj\n0 -10 Td\n\
+             (Verify at dev.sovrasign.com/verify) Tj\nET\nQ\n"
+        );
+        // The estimate of earlier versions was narrower than the id it drew.
+        let old = document_id_stamp(&lines, StampColor::Green, StampLook::Estimated);
+        assert!(old.w < text_width(&lines[0], 8.0) + 8.0);
+    }
+
+    #[test]
+    fn a_long_name_is_cut_in_the_middle() {
+        let long = "a.very.long.address.for.someone@an-example-company.example.com";
+        let cut = truncate_middle(long, 6.0, 90.0);
+        assert!(text_width(&cut, 6.0) <= 90.0, "{cut}");
+        assert!(cut.starts_with("a.very") && cut.ends_with(".com") && cut.contains('\u{2026}'));
+        assert_eq!(
+            truncate_middle("bob@example.com", 6.0, 90.0),
+            "bob@example.com"
+        );
+        assert_eq!(hero_issuer("google"), "Google");
+        assert_eq!(hero_issuer("login.example.org"), "login.example.org");
+    }
+
     fn caption() -> SignatureCaption {
         SignatureCaption {
             signer_name: "bob@example.com".into(),
             code: "9f1629a7".into(),
             signed_at: "2026-10-10 13:27 UTC".into(),
             issuer: "google".into(),
+            look: BoxLook::Framed,
         }
     }
 
@@ -5143,18 +5540,25 @@ mod appearance_tests {
             "BT\n/Helv 7.2000003 Tf\n0.30 0.30 0.40 rg\n92 29.8 Td\n(Signed by:) Tj\nET\nBT\n/Helv 12 Tf\n0 0 0 rg\n92 16 Td\n(bob@example.com) Tj\nET\nBT\n/Helv 5.6906843 Tf\n0.30 0.30 0.40 rg\n92 4 Td\n(Sig 9f1629a7  2026-10-10 13:27 UTC  via google) Tj\nET\nQ\n"
         );
 
-        let stamp =
-            document_id_stamp(&["SignPDF Document 0123456789abcdef0123456789abcdef".into()]);
+        let stamp = document_id_stamp(
+            &["SignPDF Document 0123456789abcdef0123456789abcdef".into()],
+            StampColor::Yellow,
+            StampLook::Estimated,
+        );
         assert_eq!((stamp.w, stamp.h), (204.0, 16.0));
         assert_eq!(
             stamp.content,
             "q\n0.96 0.96 0.86 rg\n0 0 204 16 re\nf\n0.55 0.5 0.2 RG\n0.8 w\n0.5 0.5 203 15 re\nS\nBT\n/Helv 8 Tf\n0.15 0.15 0.15 rg\n4 5 Td\n(SignPDF Document 0123456789abcdef0123456789abcdef) Tj\nET\nQ\n"
         );
         // From envelope schema version 7: a second line with the 'verify at' address.
-        let stamp = document_id_stamp(&[
-            "SignPDF Document 0123456789abcdef0123456789abcdef".into(),
-            "Verify at verify.example.com".into(),
-        ]);
+        let stamp = document_id_stamp(
+            &[
+                "SignPDF Document 0123456789abcdef0123456789abcdef".into(),
+                "Verify at verify.example.com".into(),
+            ],
+            StampColor::Yellow,
+            StampLook::Estimated,
+        );
         assert_eq!((stamp.w, stamp.h), (204.0, 26.0));
         assert_eq!(
             stamp.text,
@@ -5163,6 +5567,20 @@ mod appearance_tests {
         assert_eq!(
             stamp.content,
             "q\n0.96 0.96 0.86 rg\n0 0 204 26 re\nf\n0.55 0.5 0.2 RG\n0.8 w\n0.5 0.5 203 25 re\nS\nBT\n/Helv 8 Tf\n0.15 0.15 0.15 rg\n4 15 Td\n(SignPDF Document 0123456789abcdef0123456789abcdef) Tj\n0 -10 Td\n(Verify at verify.example.com) Tj\nET\nQ\n"
+        );
+        // From envelope schema version 10: a word and colour the preparing host chose.
+        let stamp = document_id_stamp(
+            &[
+                "Example 0123456789abcdef0123456789abcdef".into(),
+                "Verify at verify.example.com".into(),
+            ],
+            StampColor::Green,
+            StampLook::Estimated,
+        );
+        assert_eq!((stamp.w, stamp.h), (168.0, 26.0));
+        assert_eq!(
+            stamp.content,
+            "q\n0.89 0.96 0.9 rg\n0 0 168 26 re\nf\n0.18 0.49 0.31 RG\n0.8 w\n0.5 0.5 167 25 re\nS\nBT\n/Helv 8 Tf\n0.15 0.15 0.15 rg\n4 15 Td\n(Example 0123456789abcdef0123456789abcdef) Tj\n0 -10 Td\n(Verify at verify.example.com) Tj\nET\nQ\n"
         );
         assert_eq!(INK_PEN, "0.05 0.05 0.30 RG\n0.9 w\n1 J\n1 j\n");
         let strokes: InkStrokes = vec![

@@ -137,6 +137,7 @@ fn nda_request(pdf: &[u8], preparer: &Identity) -> PrepareRequest {
         service_link: None,
         documents: Vec::new(),
         verify_at: None,
+        stamp: None,
     }
 }
 

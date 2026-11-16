@@ -63,6 +63,7 @@ pub mod numbers;
 pub mod oidc;
 pub mod pades;
 pub mod pattern;
+mod placement;
 pub mod schema;
 pub mod timestamp;
 pub mod trust;
@@ -83,7 +84,7 @@ pub use error::{Result, SignPdfError};
 pub use keystore::{FileKeyStore, Identity, KeyStore};
 
 pub use algorithms::{Algorithm, AlgorithmPolicy, AlgorithmPolicyStatus, AlgorithmRule};
-pub use certificate::completion_certificate;
+pub use certificate::{completion_certificate, completion_certificate_named};
 pub use currency::{Currency, PaymentDue, DEFAULT_MAX_PAYMENT_MAJOR_UNITS};
 pub use dates::DateFormat;
 pub use decimal::{Decimal, DecimalError};
@@ -114,8 +115,8 @@ pub use documents::{
 };
 pub use model::{
     AuditAction, AuditEntry, Envelope, EnvelopeDocument, EsignConsent, Field, FieldRules,
-    FieldType, Policy, RecordKind, Rect, SignatureRecord, Signer, SignerStatus, SigningOrder,
-    TimestampPolicy,
+    FieldType, IdStamp, Policy, RecordKind, Rect, SignatureRecord, Signer, SignerStatus,
+    SigningOrder, StampColor, TimestampPolicy,
 };
 pub use oidc::{
     compute_nonce, peek_issuer, verify_id_token, Assessment, Basis, IdentityPolicy, IssuerKind,
@@ -124,8 +125,9 @@ pub use oidc::{
 pub use pades::{
     appended, audit_increment, pades_sign, pades_sign_increment, pades_sign_with, pades_verify,
     pades_verify_all, pades_verify_all_with, stamp_document_id, AddedAnnotation, AddedAppearance,
-    DocumentTimestampValidation, Dss, EmbeddedFile, FieldMark, FieldText, InkStrokes, PadesScan,
-    PadesValidation, SignAppearance, SignOptions, SignatureCaption, Timestamper,
+    BoxLook, DocumentTimestampValidation, Dss, EmbeddedFile, FieldMark, FieldText, InkStrokes,
+    PadesScan, PadesValidation, SignAppearance, SignOptions, SignatureCaption, StampLook,
+    Timestamper,
 };
 pub use timestamp::{TimestampInfo, TimestampToken};
 pub use trust::{
@@ -159,9 +161,13 @@ pub use workflow::{
 /// fields with a sealed number format and the 'verify at' address drawn on the document-ID stamp;
 /// v8 adds validation formats, length rules and owner messages on text fields and a currency on
 /// number formats; v9 names the rule that derives the initials stamped in a signer's further
-/// initials fields (`initials_rule`, [`initials`]): from the slot's name, no longer the email.
+/// initials fields (`initials_rule`, [`initials`]): from the slot's name, no longer the email;
+/// v10 lets the preparing host choose the document-ID stamp's word and colour (`stamp`); v11
+/// draws the signature box with the signer's drawing large across it and the details in one small
+/// row under it ([`pades::BoxLook::Hero`]), and sizes the document-ID stamp from Helvetica's real
+/// glyph widths ([`pades::StampLook::Measured`]), so a long id no longer runs past its box.
 /// See [`schema`] for the versions this build reads.
-pub const SCHEMA_VERSION: u32 = 9;
+pub const SCHEMA_VERSION: u32 = 11;
 
 /// Register the clock the engine reads on `wasm32-unknown-unknown`, which has none of its own
 /// (`std::time::SystemTime::now` traps there). The browser signer registers the page's

@@ -504,6 +504,10 @@ struct PrepareSpec {
     /// stamp as "Verify at <address>" (part of the prepared terms).
     #[serde(default)]
     verify_at: Option<String>,
+    /// Optional word and colour of the document-ID stamp (`{"word": "Example", "color": "green"}`),
+    /// part of the prepared terms. Absent: "SignPDF Document <id>" on a yellow box.
+    #[serde(default)]
+    stamp: Option<signpdf_core::IdStamp>,
 }
 
 #[derive(Deserialize)]
@@ -1163,6 +1167,7 @@ fn cmd_prepare(
         service_link: spec.service_link,
         documents,
         verify_at: spec.verify_at,
+        stamp: spec.stamp,
     };
 
     let prepared = prepare(&pdf, &request, &preparer_key)?;
@@ -1992,6 +1997,7 @@ fn cmd_pades_sign(
         rect: parse_rect(rect)?,
         caption: None,
         ink: None,
+        organization: None,
     };
     let signed = pades_sign(&pdf, &kp, &app, None)?;
     fs::write(out, &signed)?;
@@ -2306,6 +2312,12 @@ fn cmd_demo(out_dir: Option<PathBuf>) -> Result<()> {
         documents: Vec::new(),
         // Drawn on the document-ID stamp: "Verify at verify.example.com".
         verify_at: Some(DEMO_VERIFY_AT.to_string()),
+        // From schema version 10: the stamp reads "Example <id>" on a green box (the envelope of
+        // several documents below keeps the default "SignPDF Document <id>" on yellow).
+        stamp: Some(signpdf_core::IdStamp {
+            word: "Example".into(),
+            color: signpdf_core::StampColor::Green,
+        }),
     };
 
     let prepared = prepare(&pdf, &request, &preparer_key)?;
@@ -2635,6 +2647,7 @@ fn demo_documents(dir: &std::path::Path, tsa: &TestTsa, trust: &TrustStore) -> R
         service_link: Some(DEMO_SERVICE_LINK.to_string()),
         documents: combined.documents.clone(),
         verify_at: Some(DEMO_VERIFY_AT.to_string()),
+        stamp: None,
     };
     let prepared = prepare(&combined.pdf, &request, &preparer_key)?;
     fs::write(dir.join("prepared-documents.pdf"), &prepared)?;
@@ -3091,6 +3104,7 @@ mod tests {
             service_link: None,
             documents: Vec::new(),
             verify_at: None,
+            stamp: None,
         };
         let prepared = prepare(&pdf, &request, &pk).unwrap();
         let k = KeyPair::generate();

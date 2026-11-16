@@ -653,6 +653,44 @@ pub struct Envelope {
     /// ([`crate::initials::email_rule`]).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub initials_rule: Option<crate::initials::InitialsRule>,
+    /// From envelope schema version 10: the word and colour of the document-ID stamp, chosen by
+    /// the host that prepares the document ([`IdStamp`]): the stamp reads "<word> <envelope id>"
+    /// on a box of that colour. Part of the prepared terms, and the verifier redraws the stamp
+    /// from it. Absent (always, before version 10): "SignPDF Document <envelope id>" on a yellow
+    /// box ([`crate::workflow::LEGACY_STAMP_WORD`], [`StampColor::Yellow`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stamp: Option<IdStamp>,
+}
+
+/// The colour of the document-ID stamp, from a fixed palette so that every stamp keeps its dark
+/// text legible (contrast above 4.5:1). Yellow is the stamp of every document before envelope
+/// schema version 10.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StampColor {
+    #[default]
+    Yellow,
+    Green,
+}
+
+impl StampColor {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            StampColor::Yellow => "yellow",
+            StampColor::Green => "green",
+        }
+    }
+}
+
+/// How the document-ID stamp looks (envelope schema version 10): the word drawn before the
+/// envelope id ([`crate::workflow::check_stamp_word`]: up to 24 ASCII letters, digits and single
+/// spaces) and the box colour. The host that prepares the document sets it; the word also names
+/// the product in the preparer's signature reason and the signers' one-time certificates.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IdStamp {
+    pub word: String,
+    pub color: StampColor,
 }
 
 impl Envelope {

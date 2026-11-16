@@ -1,8 +1,8 @@
-// Sovrasign Verify, built on SignPDF: the hosted verifier page.
+// Sovrasign Verify: the hosted verifier page.
 //
 // It loads the engine's verifier module (signpdf_wasm.wasm: the SignPDF Rust core compiled to
 // WebAssembly, the same module as the engine's own offline verifier) and drives its C-style ABI:
-// signpdf_verify_at, signpdf_certificate, signpdf_well_known_trust, signpdf_trust_add_jwks. The
+// signpdf_verify_at, signpdf_certificate_named, signpdf_well_known_trust, signpdf_trust_add_jwks. The
 // engine decides; words.js says what its report means.
 //
 // Every string in a report comes from the PDF, which anyone can write, so it is shown with
@@ -28,7 +28,7 @@ import {
   sealVerdict,
   verdict,
 } from "./words.js";
-import { checkSeal, findSeal } from "./seal.js";
+import { checkSealWithList, findSeal } from "./seal.js";
 import { TrustList, browserStorage, statusWords } from "./trust-list.js";
 import { TRUST as BUILD_TRUST } from "./trust-pins.js";
 
@@ -268,7 +268,7 @@ async function loadTrustFile(file) {
   const status = $("trust-status");
   try {
     const t = JSON.parse(await file.text());
-    if (!Array.isArray(t.issuers)) throw new Error("not a SignPDF trust list");
+    if (!Array.isArray(t.issuers)) throw new Error("not a trust list");
     // A trust list decides whose signatures this page believes: one from the wrong hands makes
     // forged documents look valid.
     const sure = window.confirm(
@@ -469,18 +469,16 @@ function renderError(error) {
 
 /**
  * A certificate of completion sealed by Sovrasign: not a signed document, so the
- * engine has nothing to check; its seal is checked against the service's evidence keys.
+ * engine has nothing to check; its seal is checked against the evidence keys of the signed trust
+ * list (verified under this page's pins), else against the keys the service serves.
  */
 async function runSealCheck() {
-  let jwks = { keys: [] };
-  try {
+  const fetchKeys = async () => {
     const url = document.querySelector('meta[name="sovrasign-evidence-keys"]')?.content || "/v1/evidence/jwks";
     const resp = await fetch(url, { credentials: "omit", cache: "no-store" });
-    if (resp.ok) jwks = await resp.json();
-  } catch {
-    /* no keys: the seal reads as unknown */
-  }
-  const result = await checkSeal(currentPdf, jwks);
+    return resp.ok ? resp.json() : { keys: [] };
+  };
+  const result = await checkSealWithList(currentPdf, signedStatus?.list, fetchKeys);
   showVerdict(sealVerdict(result));
   const s = result.statement;
   const deletion = s?.what === "deletion";
@@ -604,7 +602,9 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!currentPdf) return;
     try {
       const name = `${(currentName || "document").replace(/\.pdf$/i, "")} - certificate.pdf`;
-      download(await callOk("signpdf_certificate", currentPdf, trustBytes()), name, "application/pdf");
+      // Sovrasign names itself in the certificate (title, footer, how to check the signed PDF).
+      const cert = await callOk("signpdf_certificate_named", currentPdf, trustBytes(), encoder.encode("Sovrasign"));
+      download(cert, name, "application/pdf");
     } catch (e) {
       renderError(e);
     }

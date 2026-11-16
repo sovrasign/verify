@@ -449,8 +449,9 @@ criteria = "safe-to-deploy"
 notes = "Baseline: on the signing and verification path; audit before adopting another version (docs/SUPPLY_CHAIN.md)"
 
 [[exemptions.rustix]]
-version = "1.1.4"
+version = "1.1.6"
 criteria = "safe-to-deploy"
+notes = "Patch release of the baseline 1.1.4 that fixes RUSTSEC-2026-0486 (xattr buffers); not on the signing path (critical.txt)"
 
 [[exemptions.schannel]]
 version = "0.1.29"

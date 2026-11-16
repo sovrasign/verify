@@ -136,6 +136,7 @@ fn a_token_issued_to_another_application_does_not_prepare_as_its_user() {
         service_link: None,
         documents: Vec::new(),
         verify_at: None,
+        stamp: None,
     };
     let prepared = prepare(&pdf, &request, &key).unwrap();
     let report = verify(&prepared, &trust()).unwrap();
@@ -177,7 +178,8 @@ fn the_profile_name_is_not_shown_as_the_signer() {
     let streams = appearance_streams(&signed);
     let signature_box = streams
         .iter()
-        .find(|s| s.contains("(Signed by:) Tj"))
+        // The box's details row (schema version 11; "Signed by:" before it).
+        .find(|s| s.contains(" \\267 via "))
         .expect("the signature box");
     assert!(
         signature_box.contains("(mallory@example.com) Tj"),
@@ -245,6 +247,7 @@ fn an_unverified_email_can_neither_prepare_nor_sign() {
             service_link: None,
             documents: Vec::new(),
             verify_at: None,
+            stamp: None,
         };
         prepare(&pdf, &request, &key).map_err(|e| e.to_string())
     };

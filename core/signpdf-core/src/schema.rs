@@ -3,7 +3,7 @@
 //!
 //! ## Experimental versions
 //!
-//! Every version up to and including 9 is **experimental**: no document written before the first
+//! Every version up to and including 10 is **experimental**: no document written before the first
 //! hosted release needs to verify later. Until that release, the current version may change in
 //! place, [`OLDEST_SCHEMA_VERSION`] may rise, and the corpus fixtures of an experimental version
 //! are replaced when its format changes. The first hosted release fixes its version as the first
@@ -116,6 +116,8 @@ pub fn decode_envelope(bytes: &[u8]) -> Result<Envelope> {
             7 => v7::decode(bytes),
             8 => v8::decode(bytes),
             9 => v9::decode(bytes),
+            10 => v10::decode(bytes),
+            11 => v11::decode(bytes),
             // `support` and this table must list the same versions.
             v => Err(SignPdfError::Workflow(format!(
                 "internal error: no decoder for supported envelope schema version {v}"
@@ -134,6 +136,8 @@ pub fn encode_envelope(env: &Envelope) -> Result<Vec<u8>> {
         7 => v7::encode(env),
         8 => v8::encode(env),
         9 => v9::encode(env),
+        10 => v10::encode(env),
+        11 => v11::encode(env),
         v if support(u64::from(v)) == VersionSupport::Newer => {
             Err(newer_version_error(u64::from(v)))
         }
@@ -165,6 +169,7 @@ mod v3 {
         refuse_v7_terms(&value, 3)?;
         refuse_v8_terms(&value, 3)?;
         refuse_v9_terms(&value, 3)?;
+        refuse_v10_terms(&value, 3)?;
         for policy in identity_policies(&value) {
             for key in ["min_level", "required_methods"] {
                 if policy.get(key).is_some() {
@@ -190,6 +195,7 @@ mod v3 {
         cannot_hold_v7_terms(env, 3)?;
         cannot_hold_v8_terms(env, 3)?;
         cannot_hold_v9_terms(env, 3)?;
+        cannot_hold_v10_terms(env, 3)?;
         let mut value = serde_json::to_value(env)?;
         let signers = value
             .get_mut("signers")
@@ -237,6 +243,7 @@ mod v4 {
         refuse_v7_terms(&value, 4)?;
         refuse_v8_terms(&value, 4)?;
         refuse_v9_terms(&value, 4)?;
+        refuse_v10_terms(&value, 4)?;
         let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(4, e.to_string()))?;
         debug_assert_eq!(env.schema_version, 4);
         Ok(env)
@@ -248,6 +255,7 @@ mod v4 {
         cannot_hold_v7_terms(env, 4)?;
         cannot_hold_v8_terms(env, 4)?;
         cannot_hold_v9_terms(env, 4)?;
+        cannot_hold_v10_terms(env, 4)?;
         Ok(serde_json::to_vec(env)?)
     }
 }
@@ -267,6 +275,7 @@ mod v5 {
         refuse_v7_terms(&value, 5)?;
         refuse_v8_terms(&value, 5)?;
         refuse_v9_terms(&value, 5)?;
+        refuse_v10_terms(&value, 5)?;
         let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(5, e.to_string()))?;
         debug_assert_eq!(env.schema_version, 5);
         Ok(env)
@@ -277,6 +286,7 @@ mod v5 {
         cannot_hold_v7_terms(env, 5)?;
         cannot_hold_v8_terms(env, 5)?;
         cannot_hold_v9_terms(env, 5)?;
+        cannot_hold_v10_terms(env, 5)?;
         Ok(serde_json::to_vec(env)?)
     }
 }
@@ -295,6 +305,7 @@ mod v6 {
         refuse_v7_terms(&value, 6)?;
         refuse_v8_terms(&value, 6)?;
         refuse_v9_terms(&value, 6)?;
+        refuse_v10_terms(&value, 6)?;
         let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(6, e.to_string()))?;
         debug_assert_eq!(env.schema_version, 6);
         Ok(env)
@@ -304,6 +315,7 @@ mod v6 {
         cannot_hold_v7_terms(env, 6)?;
         cannot_hold_v8_terms(env, 6)?;
         cannot_hold_v9_terms(env, 6)?;
+        cannot_hold_v10_terms(env, 6)?;
         Ok(serde_json::to_vec(env)?)
     }
 }
@@ -321,6 +333,7 @@ mod v7 {
         let value = levels_json(bytes, 7)?;
         refuse_v8_terms(&value, 7)?;
         refuse_v9_terms(&value, 7)?;
+        refuse_v10_terms(&value, 7)?;
         let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(7, e.to_string()))?;
         debug_assert_eq!(env.schema_version, 7);
         Ok(env)
@@ -329,6 +342,7 @@ mod v7 {
     pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
         cannot_hold_v8_terms(env, 7)?;
         cannot_hold_v9_terms(env, 7)?;
+        cannot_hold_v10_terms(env, 7)?;
         Ok(serde_json::to_vec(env)?)
     }
 }
@@ -346,6 +360,7 @@ mod v8 {
     pub(super) fn decode(bytes: &[u8]) -> Result<Envelope> {
         let value = levels_json(bytes, 8)?;
         refuse_v9_terms(&value, 8)?;
+        refuse_v10_terms(&value, 8)?;
         let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(8, e.to_string()))?;
         debug_assert_eq!(env.schema_version, 8);
         Ok(env)
@@ -353,37 +368,113 @@ mod v8 {
 
     pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
         cannot_hold_v9_terms(env, 8)?;
+        cannot_hold_v10_terms(env, 8)?;
         Ok(serde_json::to_vec(env)?)
     }
 }
 
 /// Version 9 (November 2026): version 8 with the envelope's `initials_rule`, required: the rule
 /// that derives the letters stamped in a signer's further initials fields
-/// ([`crate::initials::InitialsRule`]; `name-v1`, from the slot's name). Experimental: it may
-/// change in place, or be dropped, before the first hosted release. It is the shape of today's
-/// [`Envelope`], so it decodes and encodes directly. Once a version is stable, its module keeps
-/// reading and writing its own JSON shape when the model changes, mapping it to and from the new
-/// model without losing anything its signatures cover (as [`v3`] does).
+/// ([`crate::initials::InitialsRule`]; `name-v1`, from the slot's name). Its documents are on
+/// hosts that ran this version (November 2026), so they keep verifying with the stamp they drew:
+/// "SignPDF Document <id>" on a yellow box.
 mod v9 {
     use super::*;
 
     pub(super) fn decode(bytes: &[u8]) -> Result<Envelope> {
         let value = levels_json(bytes, 9)?;
-        let env: Envelope = serde_json::from_value(value).map_err(|e| invalid(9, e.to_string()))?;
-        debug_assert_eq!(env.schema_version, 9);
-        if env.initials_rule.is_none() {
-            return Err(invalid(9, "it names no 'initials_rule'".into()));
-        }
-        Ok(env)
+        refuse_v10_terms(&value, 9)?;
+        decode_with_initials_rule(value, 9)
     }
 
     pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
-        if env.initials_rule.is_none() {
-            return Err(SignPdfError::Workflow(
-                "a version-9 envelope names its initials rule, and this one has none".into(),
-            ));
-        }
-        Ok(serde_json::to_vec(env)?)
+        cannot_hold_v10_terms(env, 9)?;
+        encode_with_initials_rule(env, 9)
+    }
+}
+
+/// Version 10 (November 2026): version 9 with the optional `stamp`: the word and colour of the
+/// document-ID stamp the preparing host chose ([`crate::model::IdStamp`]). Its documents are on
+/// hosts that ran this version (November 2026), so they keep verifying with the framed signature
+/// box (`Signed by:`) and the estimated stamp width they drew.
+mod v10 {
+    use super::*;
+
+    pub(super) fn decode(bytes: &[u8]) -> Result<Envelope> {
+        let value = levels_json(bytes, 10)?;
+        decode_with_initials_rule(value, 10)
+    }
+
+    pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
+        encode_with_initials_rule(env, 10)
+    }
+}
+
+/// Version 11 (November 2026): the JSON of version 10; what changes is what the engine draws.
+/// A signature box shows the signer's drawing (or, without one, the name) large across the box
+/// with `Sig <code> · <time> · via <provider>` and the name in one small row under it
+/// ([`crate::pades::BoxLook::Hero`]), and the document-ID stamp is sized from Helvetica's own
+/// glyph widths ([`crate::pades::StampLook::Measured`]). Experimental: it may change in place
+/// before the first hosted release. It is the shape of today's [`Envelope`], so it decodes and
+/// encodes directly. Once a version is stable, its module keeps reading and writing its own JSON
+/// shape when the model changes, mapping it to and from the new model without losing anything
+/// its signatures cover (as [`v3`] does).
+mod v11 {
+    use super::*;
+
+    pub(super) fn decode(bytes: &[u8]) -> Result<Envelope> {
+        let value = levels_json(bytes, 11)?;
+        decode_with_initials_rule(value, 11)
+    }
+
+    pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
+        encode_with_initials_rule(env, 11)
+    }
+}
+
+/// Decode an envelope of version 9 or later, which must name its initials rule.
+fn decode_with_initials_rule(value: serde_json::Value, version: u32) -> Result<Envelope> {
+    let env: Envelope =
+        serde_json::from_value(value).map_err(|e| invalid(version, e.to_string()))?;
+    debug_assert_eq!(env.schema_version, version);
+    if env.initials_rule.is_none() {
+        return Err(invalid(version, "it names no 'initials_rule'".into()));
+    }
+    Ok(env)
+}
+
+/// Encode an envelope of version 9 or later, which must name its initials rule.
+fn encode_with_initials_rule(env: &Envelope, version: u32) -> Result<Vec<u8>> {
+    if env.initials_rule.is_none() {
+        return Err(SignPdfError::Workflow(format!(
+            "a version-{version} envelope names its initials rule, and this one has none"
+        )));
+    }
+    Ok(serde_json::to_vec(env)?)
+}
+
+/// Versions before 10 draw the legacy stamp: a document naming a stamp word and colour is not of
+/// its version.
+fn refuse_v10_terms(value: &serde_json::Value, version: u32) -> Result<()> {
+    if value.get("stamp").is_some() {
+        return Err(invalid(
+            version,
+            "it names a 'stamp', which only version 10 and later have".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// What a version before 10 cannot say is never written in it.
+fn cannot_hold_v10_terms(env: &Envelope, version: u32) -> Result<()> {
+    match &env.stamp {
+        Some(stamp) => Err(SignPdfError::Workflow(format!(
+            "this envelope draws its document-ID stamp as '{}' in {}, which a version-{version} \
+             envelope cannot express",
+            stamp.word,
+            stamp.color.as_str()
+        ))),
+        None => Ok(()),
     }
 }
 
@@ -939,6 +1030,53 @@ mod tests {
                 .replace(r#","initials_rule":"name-v1""#, ""),
             String::from_utf8(encode_envelope(&blank(8)).unwrap()).unwrap()
         );
+    }
+
+    #[test]
+    fn only_version_10_names_a_stamp_word_and_colour() {
+        use crate::model::{IdStamp, StampColor};
+        let mut env = blank(10);
+        // Without a stamp, version 10 writes version 9's JSON but for the version number.
+        assert_eq!(
+            String::from_utf8(encode_envelope(&env).unwrap())
+                .unwrap()
+                .replace(r#""schema_version":10"#, r#""schema_version":9"#),
+            String::from_utf8(encode_envelope(&blank(9)).unwrap()).unwrap()
+        );
+        env.stamp = Some(IdStamp {
+            word: "Example".into(),
+            color: StampColor::Green,
+        });
+        let bytes = encode_envelope(&env).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            json["stamp"],
+            serde_json::json!({"word": "Example", "color": "green"})
+        );
+        assert_eq!(decode_envelope(&bytes).unwrap(), env);
+        for v in 3..=9 {
+            let mut old = env.clone();
+            old.schema_version = v;
+            if v < 9 {
+                old.initials_rule = None;
+            }
+            let err = encode_envelope(&old).unwrap_err().to_string();
+            assert!(err.contains(&format!("version-{v}")), "v{v}: {err}");
+            let mut json = json.clone();
+            json["schema_version"] = v.into();
+            if v < 9 {
+                json.as_object_mut().unwrap().remove("initials_rule");
+            }
+            let err = decode_envelope(json.to_string().as_bytes()).unwrap_err();
+            assert!(err.to_string().contains("'stamp'"), "v{v}: {err}");
+        }
+        // A colour outside the palette, or an unknown member, is not version 10.
+        let mut odd = json.clone();
+        odd["stamp"]["color"] = "red".into();
+        assert!(decode_envelope(odd.to_string().as_bytes()).is_err());
+        let mut odd = json.clone();
+        odd["stamp"]["font"] = "Courier".into();
+        assert!(decode_envelope(odd.to_string().as_bytes()).is_err());
     }
 
     /// An empty envelope of version `v` (built directly: it may not be decodable).
