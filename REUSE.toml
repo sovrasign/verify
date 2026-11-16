@@ -29,3 +29,11 @@ path = ["spec/vectors/**"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Sovrasign LLC and contributors"
 SPDX-License-Identifier = "CC0-1.0"
+
+# The code of conduct is the Contributor Covenant 2.1 (Organization for Ethical Source), CC BY 4.0,
+# unchanged except for the enforcement contact.
+[[annotations]]
+path = ["CODE_OF_CONDUCT.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "Organization for Ethical Source and the Contributor Covenant contributors"
+SPDX-License-Identifier = "CC-BY-4.0"

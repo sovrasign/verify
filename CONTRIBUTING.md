@@ -12,6 +12,11 @@ the next snapshot; we close the pull request with a link to that commit.
 
 **Security issues never go in a public issue or pull request:** see [SECURITY.md](SECURITY.md).
 
+## Code of conduct
+
+Everyone taking part in this project follows the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md).
+Report unacceptable behaviour to legal@sovrasign.com.
+
 ## Sign off your commits (DCO)
 
 Every commit must carry a `Signed-off-by:` line with your name and email, which certifies the
