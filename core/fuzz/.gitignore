@@ -1,0 +1,8 @@
+# cargo-fuzz output, and the lockfile cargo writes when the targets are built: the fuzz crate is
+# outside the workspace and resolves its versions when it is built, as ClusterFuzzLite has always
+# done; a committed lockfile would also be scanned on its own by OSV-Scanner and Scorecard.
+target/
+corpus/
+artifacts/
+coverage/
+Cargo.lock
