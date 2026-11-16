@@ -903,7 +903,7 @@ fn strip_leading_zeros(bytes: &[u8]) -> &[u8] {
 
 /// Verify the signature on `signing_input` using an RSA (RS256) JWK.
 fn verify_rs256(jwk: &Jwk, signing_input: &[u8], sig: &[u8]) -> Result<()> {
-    use rsa::{BoxedUint, RsaPublicKey};
+    use rsa::{BoxedUint, PublicKey};
 
     // A document carries the JWK its ID token is checked with, so `n` and `e` are untrusted
     // until the key is matched to a trusted provider, which happens after this check.
@@ -931,10 +931,10 @@ fn verify_rs256(jwk: &Jwk, signing_input: &[u8], sig: &[u8]) -> Result<()> {
         return Err(oidc_err("RSA JWK modulus is larger than 4096 bits"));
     }
     // Public values: variable-time decoding leaks nothing secret.
-    let key = RsaPublicKey::new_with_max_size(
+    let key = PublicKey::new_with_size_limits(
         BoxedUint::from_be_slice_vartime(n),
         BoxedUint::from_be_slice_vartime(e),
-        RS256_MAX_MODULUS_BITS,
+        PublicKey::MIN_SIZE..=RS256_MAX_MODULUS_BITS,
     )
     .map_err(|e| oidc_err(format!("bad RSA public key: {e}")))?;
     // As in rsa 0.9 (and RFC 8017 §8.2.2): the signature is exactly as long as the modulus.
@@ -1152,7 +1152,7 @@ pub mod testing {
             kid: String,
         },
         Rs256 {
-            private: Box<rsa::RsaPrivateKey>,
+            private: Box<rsa::PrivateKey>,
             kid: String,
         },
     }
@@ -1175,7 +1175,7 @@ pub mod testing {
 
         /// A fresh RS256 (RSA-2048) issuer — the algorithm Google/Microsoft/Apple use.
         pub fn rs256() -> Self {
-            let private = rsa::RsaPrivateKey::new(&mut crate::crypto::os_rng(), 2048).unwrap();
+            let private = rsa::PrivateKey::new(&mut crate::crypto::os_rng(), 2048).unwrap();
             TestIssuer::Rs256 {
                 private: Box::new(private),
                 kid: "rs-test-1".to_string(),
@@ -1583,7 +1583,7 @@ mod tests {
         // modulus and signatures; one leading zero byte keeps the signature's value and its
         // 32-limb size, so rsa 0.10 alone would accept it. rsa 0.9 and RFC 8017 §8.2.2 do not.
         let issuer = TestIssuer::Rs256 {
-            private: Box::new(rsa::RsaPrivateKey::new(&mut crate::crypto::os_rng(), 2040).unwrap()),
+            private: Box::new(rsa::PrivateKey::new(&mut crate::crypto::os_rng(), 2040).unwrap()),
             kid: "rs-test-2040".into(),
         };
         rs256_by(&issuer, |n, _, sig| {

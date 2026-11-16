@@ -1,0 +1,39 @@
+# The engine's tests on every pull request that is ready for review and on every push to main:
+# format, clippy and the whole test suite of core/ (the compatibility corpus, the attack corpus,
+# the property tests), on the Rust release the reproducible WebAssembly build uses
+# (scripts/wasm-toolchain). Each publication of this repository comes in as a pull request, so
+# these run before it lands.
+name: Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        run: |
+          toolchain=$(head -n 1 scripts/wasm-toolchain | tr -d '[:space:]')
+          rustup toolchain install "$toolchain" --profile minimal --component rustfmt,clippy
+          rustup default "$toolchain"
+      - name: Format
+        working-directory: core
+        run: cargo fmt --all --check
+      - name: Clippy
+        working-directory: core
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Tests
+        working-directory: core
+        run: cargo test --locked --all

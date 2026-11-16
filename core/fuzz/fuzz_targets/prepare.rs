@@ -52,6 +52,7 @@ fuzz_target!(|data: &[u8]| {
         service_link: None,
         documents: vec![],
         verify_at: None,
+        stamp: None,
     };
     let _ = prepare(data, &req, &key);
 });

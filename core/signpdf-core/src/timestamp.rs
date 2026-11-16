@@ -465,7 +465,7 @@ pub(crate) fn signature_algorithms(
         let bits = spki
             .subject_public_key
             .as_bytes()
-            .and_then(|k| rsa::RsaPublicKey::from_pkcs1_der(k).ok())
+            .and_then(|k| rsa::PublicKey::from_pkcs1_der(k).ok())
             .map(|k| crate::algorithms::bit_length(&k.n_bytes()));
         let Some(digest) = Algorithm::from_digest_oid(&h) else {
             return Vec::new();
@@ -516,7 +516,7 @@ pub(crate) fn verify_with_spki(
     };
     if let Some(h) = rsa_hash {
         use rsa::pkcs1::DecodeRsaPublicKey;
-        let Ok(key) = rsa::RsaPublicKey::from_pkcs1_der(key_bytes) else {
+        let Ok(key) = rsa::PublicKey::from_pkcs1_der(key_bytes) else {
             return false;
         };
         let Some(hashed) = digest_with(&h, message) else {

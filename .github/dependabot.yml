@@ -20,6 +20,11 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
   - package-ecosystem: pub
     directory: /app
     schedule:

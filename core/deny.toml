@@ -22,11 +22,6 @@ all-features = true
 unmaintained = "all"
 yanked = "deny"
 ignore = [
-    # rsa "Marvin" timing side channel: affects RSA *private-key* operations. SignPDF only
-    # verifies RSA signatures with public keys (identity-provider tokens, TSA certificates);
-    # private RSA keys exist only in the test-issuer feature. Same exception as `cargo audit` in
-    # the `audit` part.
-    { id = "RUSTSEC-2023-0071", reason = "RSA private-key timing; the engine only verifies with public keys" },
     # ttf-parser is unmaintained (no vulnerability): lopdf and the engine read font metrics with
     # it. Move to skrifa (the suggested replacement) when lopdf does.
     { id = "RUSTSEC-2026-0192", reason = "unmaintained, no known vulnerability; follow-up to replace it" },
