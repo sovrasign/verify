@@ -47,6 +47,25 @@ cover: zeroize 1.9.1 (it fixes a possible read of uninitialised memory in the fa
 optimisation barrier, the one WebAssembly uses) and cpufeatures 0.3.1 (it fixes the detection of
 AVX on x86).
 
+**November 2026: 11 left.** 28 of the 39 were audited (`audits.toml`, 2026-11-18): the helpers
+and smaller crates in full (base16ct, base64ct, hybrid-array, spki, sec1, pkcs1, pkcs8, rfc6979,
+ff, group, primefield, primeorder, der_derive, digest, ecdsa, elliptic-curve, const-oid, weezl)
+and the rest as deltas from a vouched version (block-buffer, cpufeatures, crypto-common, hmac, pem-rfc7468, sha1, sha2,
+signature, flate2; rsa and pkcs1 to their final releases earlier). These are AI-assisted reviews
+(Claude Code), and their notes say so and what they covered: every unsafe block, build-time code,
+file, network and process access, and panics reachable from untrusted input. They are not a
+review of cryptographic correctness; the engine's test vectors and fuzz targets cover that part.
+
+The 11 left are the large ones, each exemption's `notes` in `config.toml` saying why and when it
+is reviewed: crypto-bigint (52,000 lines), der (the delta from 0.7 is 8,000 lines), lopdf and nom
+(to be replaced by the planned move to lopdf 0.47), x509-cert and cms, serde_json, getrandom (one
+OS backend per platform), p256 (field arithmetic, which needs a correctness review rather than an
+unsafe-code review), crypto-primes (RSA key generation only), and
+rsa 0.10.0-rc.19 (the base of the audited delta to 0.10.0, which the engine builds). Cargo vet
+itself is clean: `cargo vet --locked` passes and no critical crate is exempted outside the
+baseline. Trusting a publisher instead (`cargo vet trust`, as Mozilla does for some) is not used
+for the critical crates: the rule stays an audit or an imported audit.
+
 ## Commands
 
 ```sh

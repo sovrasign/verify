@@ -80,3 +80,10 @@ path = "fuzz_targets/xref.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "intake"
+path = "fuzz_targets/intake.rs"
+test = false
+doc = false
+bench = false
