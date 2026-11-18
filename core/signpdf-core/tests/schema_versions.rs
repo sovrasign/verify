@@ -108,6 +108,31 @@ fn the_corpus_covers_every_supported_version() {
     }
 }
 
+/// Every corpus PDF has its EU DSS result recorded in `tests/corpus/dss.json`. The weekly DSS job
+/// (`tools/dss-check/run.sh`, CI job "EU DSS (weekly)") fails on a document it has no result
+/// for, so a fixture set added without `tools/dss-check/run.sh --update` is caught here, in the
+/// normal checks, rather than a week later (it was: v10 and v11, run of 2026-11-16).
+#[test]
+fn every_corpus_pdf_has_a_recorded_eu_dss_result() {
+    let json = std::fs::read(corpus_root().join("dss.json")).unwrap();
+    let recorded: serde_json::Value = serde_json::from_slice(&json).unwrap();
+    let files = recorded["files"].as_object().expect("dss.json: files");
+    let mut missing = Vec::new();
+    for s in fixture_sets() {
+        for p in s.pdfs() {
+            let key = format!("{}/{}", s.name(), p.file_name().unwrap().to_string_lossy());
+            if !files.contains_key(&key) {
+                missing.push(key);
+            }
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "no EU DSS result recorded for {missing:?}: run tools/dss-check/run.sh --update \
+         (podman or docker) and commit tests/corpus/dss.json"
+    );
+}
+
 #[test]
 fn the_newest_version_has_a_dropdown_and_a_signature_timestamp_in_the_corpus() {
     // A format change to a filled dropdown or to a PAdES B-T signature timestamp must break a

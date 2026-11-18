@@ -1,11 +1,47 @@
 
 # cargo-vet audits file
 
+[[audits.base16ct]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "1.0.0"
+notes = "Unsafe only in from_utf8_unchecked over output the encoder wrote itself (every byte is an ASCII hex digit from the constant-time nibble encoder). Decoding is safe code returning errors on bad input. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.base64ct]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "1.8.3"
+notes = "Constant-time Base64. Unsafe checked: in-place decoding reads chunk i at 4i and writes at 3i (inside the buffer, read before write), the final copy of fewer than 3 bytes stays within the decoded length, from_utf8_unchecked only on encoder output (alphabet bytes). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.block-buffer]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.4 -> 0.12.1"
+notes = "Rewrite on hybrid-array with MaybeUninit storage. Each unsafe block checked: copies stay within the block (Eager keeps pos < block size in the last byte, Lazy pos <= block size), assume_init only after the whole block is written, ResetGuard restores the invariant if a compress closure panics, ReadBuffer keeps 0 < pos <= size. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.const-oid]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.10.2"
+notes = "deny(unsafe_code); one unsafe block, the repr(transparent) cast of a byte slice to ObjectIdentifierRef, reached from untrusted input only after from_bytes has checked every arc. Panics only in const evaluation of literal OIDs and in the arc iterator over already validated OIDs; the generated OID database is data. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.cpufeatures]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.1 -> 0.2.17"
+notes = "Older line of an audited crate (the backport line sha2 0.10 uses). Unsafe limited to CPUID/XGETBV intrinsics on x86, getauxval on Linux and sysctlbyname with NUL-checked names on Apple, as in 0.3.1. Lacks 0.3.1's AVX detection fix (a wrong answer can only lead to an illegal-instruction crash on unusual hardware, not memory unsafety). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
 [[audits.crypto-bigint]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.7.10 -> 0.7.11"
 notes = "Delta reviewed with Claude Code (AI-assisted). No unsafe code added or changed, no build script or I/O. Thumb-1 constant-time fixes, bits -> bit_width rename with deprecated aliases, BoxedMontyForm squaring optimisation, BoxedUint parses 0 as one limb."
+
+[[audits.crypto-common]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.6 -> 0.2.2"
+notes = "forbid(unsafe_code). Trait changes for hybrid-array (generic-array removed), KeyInit/KeyIvInit helpers, weak-key checks. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
 
 [[audits.ctutils]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
@@ -13,14 +49,146 @@ criteria = "safe-to-deploy"
 delta = "0.4.6 -> 0.4.8"
 notes = "Delta reviewed with Claude Code (AI-assisted). forbid(unsafe_code); no build script or I/O. Thumb-1 and RISC-V 32 constant-time hardening of comparisons."
 
+[[audits.der_derive]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.8.0"
+notes = "forbid(unsafe_code). Proc macro generating der Sequence/Choice/Enumerated impls; no file, network or environment access at build time. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.digest]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.10.7"
+notes = "forbid(unsafe_code). Hash traits and core-api wrappers of the 0.10 line (used by older hash crates in the tree); MAC verification through subtle's constant-time comparison. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.digest]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.11.3"
+notes = "forbid(unsafe_code). Hash traits, core-api wrappers, MAC helpers with constant-time comparison (subtle/ctutils). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.ecdsa]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.17.0"
+notes = "No unsafe code. Verification read in full: Signature::from_scalars refuses r or s of zero or not below n, verify_prehashed refuses high s where the curve asks for it, computes u1 = z/s and u2 = r/s, and compares r with x(u1 G + u2 Q) mod n (the identity gives x = 0, which never equals a non-zero r); bytes2scalar truncates the digest to the order's bit length as SEC 1 requires. DER signature parsing goes through der. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.elliptic-curve]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.14.3"
+notes = "deny(unsafe_code); the 4 unsafe blocks are slice and array casts of repr(transparent) newtypes (NonIdentity, NonZeroScalar). Checked the parts the engine's verification relies on: ScalarValue::new/from_slice refuse values not below the order (constant-time compare), PublicKey::from_sec1_bytes decodes through sec1 and the curve's on-curve check and refuses the identity. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.ff]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.14.0"
+notes = "forbid(unsafe_code). Field traits and helpers (batch inversion, bit iteration). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.flate2]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.5 -> 1.1.9"
+notes = "The engine uses the miniz_oxide (pure Rust) backend. The changed unsafe code is in the C zlib backend (set_level/set_dictionary), which the engine does not build; the zlib-rs paths move to its safe API. Other changes: write/read wrapper fixes and docs. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.group]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.14.0"
+notes = "No unsafe code. Group/curve traits, wNAF helpers. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.hmac]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.12.1 -> 0.13.0"
+notes = "No unsafe code. Port to digest 0.11 block-level APIs (EagerHash), SimpleHmac kept, reset handling. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.hybrid-array]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.4.15"
+notes = "Every unsafe block checked: casts between Array<T, U> and [T; N] rely on repr(transparent) and the crate-sealed ArraySize impls (each checked by a generated test); slice casts check the length first; split/concat/flatten use ManuallyDrop + ptr::read on fully initialised data; from_fn's guard drops only initialised elements on error or panic. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.pem-rfc7468]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.7.0 -> 1.0.0"
+notes = "deny(unsafe_code). Adds detect_base64_line_width / Decoder::new_detect_wrap (bounded scan for the first line break), error text and lint changes. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.pkcs1]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.8.0-rc.5"
+notes = "forbid(unsafe_code). RSA key and parameter types over der; one expect when building OAEP params from a caller's label; std::fs only in tests. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
 [[audits.pkcs1]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.8.0-rc.5 -> 0.8.0"
 notes = "Delta reviewed with Claude Code (AI-assisted). forbid(unsafe_code); no build script or I/O. Ref/owned public-key split, new trait impls, rejects empty otherPrimeInfos."
 
+[[audits.pkcs8]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.11.0"
+notes = "forbid(unsafe_code). PrivateKeyInfo and encrypted keys over der (the engine only reads public keys through spki); errors, not panics, on bad input; std::fs only in tests. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.primefield]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.14.0"
+notes = "forbid(unsafe_code). Macros for Montgomery-form prime fields on crypto-bigint; arithmetic delegated to crypto-bigint (still on the baseline). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.primeorder]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.14.0"
+notes = "No unsafe code. Complete addition formulas (Renes-Costello-Batina) for prime-order short Weierstrass curves, point encoding through sec1 with identity and on-curve checks. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.rfc6979]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.6.0"
+notes = "No unsafe code. HMAC_DRBG per RFC 6979 section 3.3; expects only on invariants (HMAC accepts any key length, size arithmetic). No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
 [[audits.rsa]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.10.0-rc.19 -> 0.10.0"
 notes = "Delta reviewed with Claude Code (AI-assisted). No unsafe code, build script, file, network or process access. Final release of the same project: num-bigint-dig fully gone, implicit rejection for PKCS#1 v1.5 decryption, cfrg-rsa-guidance hardening of private-key operations. The engine's path, PKCS#1 v1.5 verification, checks the signature length and s < n before the public operation and unpads as before. Fixes RUSTSEC-2023-0071."
+
+[[audits.sec1]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.8.1"
+notes = "forbid(unsafe_code). EncodedPoint and EC private key types; from_bytes validates the tag and length, so the later expects (tag, coordinate sizes) are invariants; std::fs only in tests. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.sha1]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.6 -> 0.11.0"
+notes = "Unsafe only in the SHA-NI (x86) and SHA2 (aarch64) compress functions, called after cpufeatures detection or under a compile_error-guarded cfg backend; unaligned loads/stores stay inside the 64-byte block and the first 16 bytes of the state. Collision-detection soft backend is safe code. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.sha2]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.9 -> 0.11.1"
+notes = "Unsafe only in SIMD backends (x86 SHA-NI and AVX2, aarch64 SHA2/SHA3, wasm32 simd128, RISC-V Zknh and LoongArch asm), each selected by cpufeatures detection or a compile_error-guarded cfg; loads and stores stay inside the block, state and round-constant arrays. Soft backend is safe code. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.signature]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 3.0.0"
+notes = "forbid(unsafe_code). Trait-only crate: async/multipart signer traits, rand_core 0.10, removal of the derive feature. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.spki]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.8.1"
+notes = "forbid(unsafe_code). SubjectPublicKeyInfo and AlgorithmIdentifier types over der; decoding returns errors, no panics on input; std::fs only in tests. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.weezl]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.1.12"
+notes = "forbid(unsafe_code). LZW decoder/encoder with bounded code tables (decoding errors, not panics, on invalid codes); file access only in the lzw binary and benches, the engine uses the library. No build script. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."

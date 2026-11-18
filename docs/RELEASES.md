@@ -70,23 +70,76 @@ every week. What the repository does for each check:
 
 ## 4. Engine versions
 
-The engine's crates in `core/` share one version, `[workspace.package] version` in
-`core/Cargo.toml`, which `signpdf_version` reports. [CHANGELOG.md](../CHANGELOG.md) has an entry for
-each one.
+Two numbers, kept apart:
 
-- **The rule.** A change to what verifies, or how, is at least a minor version, and the
-  compatibility corpus must pass unchanged (an entry in the changelog says why when it cannot,
-  which is only allowed for experimental schema versions). `scripts/check-engine-version.py`,
-  in the `release` part of `scripts/check.sh`, enforces the first half: when a file that decides
-  verification (its `VERIFICATION_FILES`: the engine's source, the WebAssembly entry points, the
-  corpus and its expected reports, the test vectors, the verifier page's trust-list handling and
-  the pinned trust-list keys) differs from the nearest `core-v*` tag, the version must be at least
-  one minor version above that tag's, with a changelog entry. The corpus tests (`cargo test`, the
-  `wasm` part) enforce the second.
-- **Between releases.** The first verification change after a tag raises the minor version and
-  adds `## [<version>] - unreleased` to the changelog; later changes before the next tag add to
-  that entry and need no further bump.
-- **Releasing.** Replace `unreleased` with the date, merge into `main`, then tag the merge commit
-  `core-v<version>` (annotated: `git tag -a core-v0.2.0 -m "SignPDF engine 0.2.0"`) and push the
-  tag. The check fails if a tag names another version than its commit's `core/Cargo.toml`. It
-  needs the whole history (CI checks out with `fetch-depth: 0`); in a shallow clone it fails.
+| Number | Where | What it versions | Who reads it |
+| --- | --- | --- | --- |
+| **Engine version** (`0.3.0`) | `[workspace.package] version` in `core/Cargo.toml`; `signpdf_version` in the WebAssembly module and the FFI; tags `core-v<version>` | The software: the five crates in `core/` (`signpdf-core`, `-auth`, `-cli`, `-ffi`, `-wasm`) and the browser verifier built from them, one version for all | People and programs choosing a build, reading a changelog, pinning a dependency |
+| **Envelope schema version** (`schema_version`, `11`) | `SCHEMA_VERSION` in `signpdf-core`; inside each signed document's envelope | The document format: what a signed PDF holds and the rules it was made under ([spec/](../spec/)) | Verifiers: a document's own number says which rules check it |
+
+They move independently. A new schema version always comes with a new engine minor version (a
+build has to learn to verify it), but most engine versions change no schema version, and an old
+document keeps its schema version forever: a newer engine verifies it by that version's rules
+(`docs/SECURITY_MODEL.md` §8). The verifier release name (`verifier-<date>-<commit>`, §2) names a
+build of the verifier page, not either number.
+
+### What the engine version means
+
+[Semantic Versioning](https://semver.org/) with the usual pre-1.0 reading, the public API being
+the crates' Rust API, the FFI and WebAssembly exports, the CLI's arguments and JSON report, and
+**what verifies**:
+
+- **Minor** (`0.3.0` -> `0.4.0`): any change to what verifies or how (a schema version added or
+  retired, a check added, tightened or relaxed, a trust-list rule), and any breaking API change.
+- **Patch** (`0.3.0` -> `0.3.1`): everything else: fixes and changes that leave every verification
+  result, the compatibility corpus and the API as they were (performance, error wording, signing
+  side only, documentation, dependency updates that change no result).
+- **1.0.0** comes with the first hosted release, when the schema versions stop being experimental
+  (`docs/SECURITY_MODEL.md` §8). From then on a major version is needed to stop verifying a
+  schema version that stable documents use, which the compatibility promise rules out in
+  practice, or to break the API; minor and patch keep their meaning.
+
+The crates are not published to crates.io: the source is the public repository,
+`github.com/sovrasign/verify`, and its tags.
+
+### The rule and its check
+
+A change to what verifies, or how, is at least a minor version, and the compatibility corpus must
+pass unchanged (an entry in the changelog says why when it cannot, which is only allowed for
+experimental schema versions). `scripts/check-engine-version.py`, one of the release checks,
+enforces the first half: when a file that decides verification (its
+`VERIFICATION_FILES`: the engine's source, the WebAssembly entry points, the corpus and its
+expected reports, the test vectors, the verifier page's trust-list handling and the pinned
+trust-list keys) differs from the nearest `core-v*` tag, the version must be at least one minor
+version above that tag's, with a changelog entry. The corpus tests (`cargo test`, the `wasm`
+part) enforce the second. A patch release is a judgement the check cannot make; the pull request
+says why nothing that verifies changed.
+
+### The changelog
+
+[CHANGELOG.md](../CHANGELOG.md) has one entry per engine version, newest first, written for
+someone deciding whether to upgrade: what verifies differently, which schema versions it verifies
+and signs, API changes, and security fixes with their advisory IDs. Between releases:
+
+- The first verification change after a tag raises the minor version and adds
+  `## [<version>] - unreleased`; later changes before the next tag add to that entry and need no
+  further bump.
+- A change that needs no bump but that users would notice (a fix, an API addition) adds a line
+  to the open entry, or opens a patch entry when there is none.
+
+### Releasing a version
+
+1. On a branch: replace `unreleased` with the date (UTC) in `CHANGELOG.md`; run
+   the checks (`scripts/check-engine-version.py` checks the version against the last tag).
+2. Merge into `main` as usual, then tag the merge commit, annotated, and push the tag:
+   `git tag -a core-v0.3.0 -m "SignPDF engine 0.3.0"` and `git push origin core-v0.3.0`. The check
+   fails if a tag names another version than its commit's `core/Cargo.toml`. It needs the whole
+   history (CI checks out with `fetch-depth: 0`); in a shallow clone it fails.
+3. Publish the tagged commit to the public repository (a pull request of the snapshot there; the
+   engine's tests run on it). After that pull request is merged, tag its merge commit there with
+   the same annotated tag, `core-v<version>`, and create a GitHub release from it whose notes are
+   the changelog entry. The public tag is what a third party pins; the development repository's
+   tag is what the version check reads.
+4. The next verification change opens the next `unreleased` entry.
+
+A version is never re-tagged: a mistake in a released version is fixed by the next one.

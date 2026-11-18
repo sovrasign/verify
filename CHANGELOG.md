@@ -6,7 +6,7 @@ The Flutter app in `app/` has its own version.
 
 A change to what verifies, or how, is at least a minor version, and the compatibility corpus
 (`core/signpdf-core/tests/corpus/`) must pass unchanged except where a version's entry says why.
-`scripts/check-engine-version.py` (part of `scripts/check.sh`) fails when a file that decides
+`scripts/check-engine-version.py` (one of the release checks) fails when a file that decides
 verification changed since the last `core-v<version>` tag without that bump. How a version is
 released: [docs/RELEASES.md](docs/RELEASES.md) §4.
 

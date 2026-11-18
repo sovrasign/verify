@@ -5,7 +5,9 @@
 # the real-world fixtures. The envelope_json target gets the envelopes those documents embed, read
 # from the reports beside them.
 cd "$SRC/signpdf/core/fuzz"
-cargo fuzz build -O
+# -O with -a (debug assertions): optimised, and the engine's debug_assert! checks and overflow
+# checks still fire, so a broken invariant is a finding rather than silent.
+cargo fuzz build -O -a
 
 targets=$(tr -d '\r' <Cargo.toml | sed -n 's/^name = "\(.*\)"$/\1/p' | grep -v '^signpdf-fuzz$')
 release=target/x86_64-unknown-linux-gnu/release

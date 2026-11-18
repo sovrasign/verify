@@ -32,6 +32,13 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: none
+          # Test code is left out: fixtures log certificate details and hard-code test keys on
+          # purpose (the open alerts of 2026-11-16 were all of that kind there). Inline, so the
+          # published copy of this workflow needs no extra file.
+          config: |
+            paths-ignore:
+              - "**/tests/**"
+              - core/fuzz/**
       - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           category: /language:${{ matrix.language }}
