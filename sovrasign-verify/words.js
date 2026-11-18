@@ -11,10 +11,6 @@
 // Every string in a report comes from the PDF, which anyone can write: this module returns plain
 // strings and the page shows them with textContent only. No DOM here, so Node tests it
 // (tools/verify-words.test.mjs).
-//
-// The words are in the visitor's language: l10n/verify_<lang>.arb through i18n.js `t`.
-
-import { lang, t } from "./i18n.js";
 
 /** The test identity provider of the engine (its private key is public): dev only. */
 export const TEST_ISSUER = "https://mock-idp.signpdf.test";
@@ -60,8 +56,7 @@ function zoneParts(d, zone) {
  */
 export function fmtTime(iso, { seconds = false } = {}) {
   const d = new Date(iso);
-  if (!iso || Number.isNaN(d.getTime())) return iso || t("time_unknown");
-  if (lang() !== "en") return fmtTimeIntl(d, seconds);
+  if (!iso || Number.isNaN(d.getTime())) return iso || "an unknown time";
   const clock = (h, m, s) => `${two(h)}:${two(m)}${seconds ? `:${two(s)}` : ""}`;
   const utc = `${clock(d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds())} UTC`;
   const utcDay = `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
@@ -77,27 +72,6 @@ export function fmtTime(iso, { seconds = false } = {}) {
   return `${day} ${local.y}, ${clock(local.h, local.min, local.s)} ${local.zone} (${day === utcDay ? "" : `${utcDay}, `}${utc})`;
 }
 
-/**
- * fmtTime in another language than English: the day and clock as that language writes them
- * (Intl), the zone's short name, and the same instant in UTC, as the English form does.
- */
-function fmtTimeIntl(d, seconds) {
-  const l = lang();
-  const day = (zone) => new Intl.DateTimeFormat(l, { timeZone: zone, day: "numeric", month: "short", year: "numeric" }).format(d);
-  const clock = (zone) =>
-    new Intl.DateTimeFormat(l, { timeZone: zone, hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hourCycle: "h23" }).format(d);
-  let local;
-  try {
-    local = zoneParts(d, viewerZone);
-  } catch (_) {
-    local = null;
-  }
-  const utc = `${clock("UTC")} UTC`;
-  const sameDay = local && local.y === d.getUTCFullYear() && local.m === d.getUTCMonth() + 1 && local.d === d.getUTCDate();
-  if (!local || (sameDay && local.h === d.getUTCHours() && local.min === d.getUTCMinutes())) return `${day("UTC")} ${utc}`;
-  return `${day(viewerZone)} ${clock(viewerZone)} ${local.zone} (${sameDay ? "" : `${day("UTC")} `}${utc})`;
-}
-
 /** The local clock part of `2026-11-02T11:14:03+02:00`: "11:14". */
 function localClock(local) {
   const m = /T(\d{2}):(\d{2})/.exec(local || "");
@@ -109,7 +83,7 @@ function localClock(local) {
  * by issuer, else the issuer's host.
  */
 export function providerName(issuer, trust) {
-  if (!issuer) return t("provider_unknown");
+  if (!issuer) return "an unknown provider";
   const entry = (trust?.issuers || []).find((i) => i.issuer === issuer || templateMatches(i.issuer, issuer));
   if (entry?.name) return entry.name;
   for (const [iss, name] of BIG) if (iss === issuer) return name;
@@ -138,48 +112,48 @@ export function isOurs(issuer, trust) {
   return /^sovrasign\b/i.test(providerName(issuer, trust));
 }
 
-// Assurance levels by the evidence they rest on; never a grade: the shared word
-// list's level names (l10n/words.json checks verify:level_l1 to l5 against it).
-const LEVELS = ["L1", "L2", "L3", "L4", "L5"];
-const levelName = (level) => (LEVELS.includes(level) ? t(`level_${level.toLowerCase()}`) : "");
+// Assurance levels by the evidence they rest on; never a grade.
+const LEVEL_NAMES = { L1: "Email", L2: "Account", L3: "Strong", L4: "ID checked", L5: "Qualified" };
 
-// Why an identity does not count, in words (verify_<lang>.arb why_*).
-const TRUST_WHY = new Set([
-  "unknown-issuer",
-  "unknown-key",
-  "untrusted-audience",
-  "no-trusted-time",
-  "outside-key-window",
-  "distrusted-key",
-  "algorithm-not-accepted",
-  "insufficient-level",
-  "insecure-dev",
-]);
-const trustWhy = (code) => (TRUST_WHY.has(code) ? t(`why_${code.replaceAll("-", "_")}`) : t("why_other", { code }));
+// What a device signing time rests on: the shared words time_not_timestamped and
+// time_no_timestamp_yet (service/api/l10n/words_en.arb; l10n/tools/words.mjs checks them).
+const TIME_WORDS = { notTimestamped: "Not independently timestamped", noTimestampYet: "No trusted timestamp yet" };
+
+// Why an identity does not count, in words.
+const TRUST_WHY = {
+  "unknown-issuer": "This verifier's trust list does not include this sign-in provider.",
+  "unknown-key": "The sign-in was signed with a key this verifier's trust list does not hold. Fetching the providers' current keys may help.",
+  "untrusted-audience": "The sign-in was made for an app this verifier's trust list does not include.",
+  "no-trusted-time": "This sign-in counts once a trusted timestamp covers the signature. The service adds one when the envelope ends.",
+  "outside-key-window": "The sign-in key was not valid at the time the trusted timestamp shows.",
+  "distrusted-key": "The sign-in key was withdrawn from the trust list before this signature was timestamped.",
+  "algorithm-not-accepted": "The sign-in relies on an algorithm this verifier no longer accepts.",
+  "insufficient-level": "The identity check is weaker than the sender required for this signer.",
+  "insecure-dev": "Test sign-in: anyone can sign as anyone. Development only.",
+};
 
 /**
  * One piece of identity evidence in its long form. `email` is the address the
  * provider confirmed.
  */
 export function evidenceText(basis, email, trust) {
-  const who = email || t("address_unknown");
+  const who = email || "an unknown address";
   const by = providerName(basis.issuer, trust);
   switch (basis.method) {
     case "email-code":
-      return t("ev_email_code", { email: who, service: codeSender(by) });
+      return `Proved control of ${who} with a one-time code sent by ${codeSender(by)} (lower assurance)`;
     case "account":
-      return t("ev_account", { provider: by, email: who });
+      return `Signed in with ${by} as ${who}; the sign-in is sealed into this signature`;
     case "organization":
-      if (!["Google", "Microsoft", "Apple"].includes(by)) return t("ev_org", { org: by, email: who });
-      return basis.organization
-        ? t("ev_org_big", { provider: by, email: who, org: basis.organization })
-        : t("ev_account", { provider: by, email: who });
+      return ["Google", "Microsoft", "Apple"].includes(by)
+        ? `Signed in with ${by} as ${who}${basis.organization ? ` (organization ${basis.organization})` : ""}; the sign-in is sealed into this signature`
+        : `Signed in through ${by}'s identity provider as ${who}; the sign-in is sealed into this signature`;
     case "phone":
-      return t("ev_phone", { provider: by });
+      return `Confirmed a code sent to their phone, attested by ${by}`;
     case "id-document":
-      return t("ev_id", { provider: by });
+      return `Government ID checked by ${by}`;
     case "qualified":
-      return t("ev_qualified", { provider: by });
+      return `Qualified electronic signature under eIDAS, certificate from ${by}`;
     default:
       return `${basis.method} (${by})`;
   }
@@ -190,62 +164,75 @@ export function methodText(basis, trust) {
   const by = providerName(basis.issuer, trust);
   switch (basis.method) {
     case "email-code":
-      return t("m_email_code");
+      return "Email code";
     case "account":
     case "organization":
-      return ["Google", "Microsoft", "Apple"].includes(by) ? t("m_provider", { provider: by }) : t("m_through", { provider: by });
+      return ["Google", "Microsoft", "Apple"].includes(by) ? `${by} sign-in` : `Sign-in through ${by}`;
     case "phone":
-      return t("m_phone");
+      return "Phone code";
     case "id-document":
-      return t("m_id");
+      return "Government ID";
     case "qualified":
-      return t("m_qualified");
+      return "Qualified certificate";
     default:
       return basis.method || "";
   }
 }
 
-/** The headline for a report: {kind: ok | warn | bad | info, title, line, links?}. */
+/** The headline for a report: {kind: ok | warn | bad, title, line}. */
 export function verdict(report) {
-  if (report.valid) return { kind: "ok", title: t("v_valid_title"), line: t("v_valid_line") };
-  if (report.trusted_time_pending) return { kind: "warn", title: t("v_pending_title"), line: t("v_pending_line") };
-  if (report.integrity_ok) return { kind: "warn", title: t("v_intact_title"), line: t("v_intact_line") };
-  return { kind: "bad", title: t("v_bad_title"), line: t("v_bad_line") };
-}
-
-/** Adobe Acrobat Reader and the European Commission's DSS validation demo (spec 01 Q2). */
-export const OTHER_VERIFIERS = [
-  { key: "v_other_link_acrobat", href: "https://get.adobe.com/reader/" },
-  { key: "v_other_link_dss", href: "https://ec.europa.eu/digital-building-blocks/DSS/webapp-demo/validation" },
-];
-
-/**
- * How many PDF signatures a file carries, whoever made them: its signature dictionaries' byte
- * ranges (`/ByteRange [`), counted in the raw bytes. No validation and no trust judgement: only
- * whether the file has PDF signatures at all, for a file Sovrasign did not sign (spec 01 Q2).
- */
-export function countPdfSignatures(bytes) {
-  if (!bytes?.length) return 0;
-  const text = new TextDecoder("latin1").decode(bytes);
-  return (text.match(/\/ByteRange\s*\[/g) || []).length;
-}
-
-/**
- * The headline when the engine could not read the document at all. `pdfSignatures`: how many PDF
- * signatures the file carries (countPdfSignatures). A file Sovrasign did not sign gets a neutral
- * answer (`info`, not red: bf-verifier-other-vendor-message, spec 01 Q2): it is not bad, only not
- * ours. It says whether the file has PDF signatures and where to check them (`links`).
- */
-export function errorVerdict(error, { pdfSignatures = 0 } = {}) {
-  if (error.code === "updated") return { kind: "warn", title: t("v_updated_title"), line: t("v_updated_line") };
-  if (error.code === 16) return { kind: "warn", title: t("v_newer_title"), line: t("v_newer_line") };
-  if (/no embedded envelope/.test(error.message || "")) {
-    const n = pdfSignatures;
-    if (!n) return { kind: "info", title: t("v_other_title"), line: t("v_other_none") };
-    const links = OTHER_VERIFIERS.map((l) => ({ text: t(l.key), href: l.href }));
-    return { kind: "info", title: t("v_other_title"), line: t("v_other_signed", { n }), links };
+  if (report.valid) {
+    return {
+      kind: "ok",
+      title: "Valid",
+      line: "Nothing changed since it was signed, and every signer's identity checks out.",
+    };
   }
-  return { kind: "bad", title: t("v_error_title"), line: error.message || String(error) };
+  if (report.trusted_time_pending) {
+    return {
+      kind: "warn",
+      title: "Intact, waiting for a trusted timestamp",
+      line: "Nothing changed since it was signed. Some sign-ins count only once a trusted timestamp covers them; the service adds one when the envelope ends.",
+    };
+  }
+  if (report.integrity_ok) {
+    return {
+      kind: "warn",
+      title: "Intact, but not every identity is confirmed",
+      line: "Nothing changed since it was signed, but this verifier's trust list does not confirm every sign-in. Each signer below says why.",
+    };
+  }
+  return {
+    kind: "bad",
+    title: "Not valid",
+    line: "The document or its signing history failed the checks. Do not rely on it; the reasons are below.",
+  };
+}
+
+/** The headline when the engine could not read the document at all. */
+export function errorVerdict(error) {
+  if (error.code === "updated") {
+    return {
+      kind: "warn",
+      title: "Sovrasign Verify was updated",
+      line: "Reload the page to continue, then check the file again. Your file stays on this device.",
+    };
+  }
+  if (error.code === 16) {
+    return {
+      kind: "warn",
+      title: "Made by a newer version",
+      line: "This document was made by a newer version of Sovrasign than this page. Reload the page to get the current verifier, then check it again.",
+    };
+  }
+  if (/no embedded envelope/.test(error.message || "")) {
+    return {
+      kind: "bad",
+      title: "No Sovrasign signatures",
+      line: "This PDF has no Sovrasign signing history to check. Other kinds of PDF signatures need another verifier.",
+    };
+  }
+  return { kind: "bad", title: "Could not check this file", line: error.message || String(error) };
 }
 
 /**
@@ -256,51 +243,97 @@ export function errorVerdict(error, { pdfSignatures = 0 } = {}) {
 export function sealVerdict(result) {
   if (result.statement?.what === "deletion") return deletionVerdict(result);
   if (result.statement?.what === "invoice") return invoiceVerdict(result);
-  const time = sealTime(result);
+  const when = result.statement?.iat ? fmtTime(new Date(result.statement.iat * 1000).toISOString()) : "";
+  const proof = "It is a summary: check the signed PDF itself for the proof.";
   switch (result.state) {
     case "sealed":
-      return { kind: "ok", title: t("s_sealed_title"), line: time ? t("s_sealed_line", { time }) : t("s_sealed_line_notime") };
+      return {
+        kind: "ok",
+        title: "Certificate of completion, unchanged",
+        line: `Sovrasign sealed this certificate${when ? ` on ${when}` : ""}, and nothing in it has changed since. ${proof}`,
+      };
     case "changed":
-      return { kind: "bad", title: t("s_changed_title"), line: t("s_changed_line") };
+      return {
+        kind: "bad",
+        title: "Certificate changed after it was sealed",
+        line: `This certificate is not what Sovrasign made: its content differs from what was sealed. Ask the sender for the original, or download it again. ${proof}`,
+      };
     case "added":
-      return { kind: "bad", title: t("s_added_title"), line: t("s_added_line") };
+      return {
+        kind: "bad",
+        title: "Something was added to this certificate",
+        line: `Content was added after Sovrasign sealed this certificate, so what you see may not be what was sealed. ${proof}`,
+      };
     case "unknown_key":
-      return { kind: "warn", title: t("s_unknown_title"), line: t("s_unknown_line") };
+      return {
+        kind: "warn",
+        title: "Seal not recognized",
+        line: "This certificate carries a seal from a key that is not one of Sovrasign's published keys. It may come from another environment, or be forged.",
+      };
     default:
-      return { kind: "bad", title: t("s_invalid_title"), line: t("s_invalid_line") };
+      return {
+        kind: "bad",
+        title: "Seal not valid",
+        line: `The seal on this certificate does not verify. ${proof}`,
+      };
   }
 }
-
-/** When the seal says it was made, in words, or "". */
-const sealTime = (result) => (result.statement?.iat ? fmtTime(new Date(result.statement.iat * 1000).toISOString()) : "");
 
 /** An invoice or receipt sealed by Sovrasign: Stripe issued it,
  * the service sealed it when it was downloaded. */
 function invoiceVerdict(result) {
-  const time = sealTime(result);
+  const when = result.statement?.iat ? fmtTime(new Date(result.statement.iat * 1000).toISOString()) : "";
   switch (result.state) {
     case "sealed":
-      return { kind: "ok", title: t("inv_sealed_title"), line: time ? t("inv_sealed_line", { time }) : t("inv_sealed_line_notime") };
+      return {
+        kind: "ok",
+        title: "Invoice, unchanged",
+        line: `Sovrasign sealed this invoice${when ? ` on ${when}` : ""}, and nothing in it has changed since.`,
+      };
     case "changed":
     case "added":
-      return { kind: "bad", title: t("inv_changed_title"), line: t("inv_changed_line") };
+      return {
+        kind: "bad",
+        title: "Invoice changed after it was sealed",
+        line: "This invoice is not what Sovrasign issued: its content differs from what was sealed. Download it again from your Plan and usage page.",
+      };
     case "unknown_key":
-      return { kind: "warn", title: t("s_unknown_title"), line: t("inv_unknown_line") };
+      return {
+        kind: "warn",
+        title: "Seal not recognized",
+        line: "This invoice carries a seal from a key that is not one of Sovrasign's published keys. It may come from another environment, or be forged.",
+      };
     default:
-      return { kind: "bad", title: t("s_invalid_title"), line: t("inv_invalid_line") };
+      return {
+        kind: "bad",
+        title: "Seal not valid",
+        line: "The seal on this invoice does not verify, so it is not proof of what Sovrasign billed.",
+      };
   }
 }
 
 /** A certificate of deletion sealed by Sovrasign. */
 function deletionVerdict(result) {
-  const time = sealTime(result);
+  const when = result.statement?.iat ? fmtTime(new Date(result.statement.iat * 1000).toISOString()) : "";
   switch (result.state) {
     case "sealed":
-      return { kind: "ok", title: t("del_sealed_title"), line: time ? t("del_sealed_line", { time }) : t("del_sealed_line_notime") };
+      return {
+        kind: "ok",
+        title: "Certificate of deletion, unchanged",
+        line: `Sovrasign sealed this certificate of deletion${when ? ` on ${when}` : ""}, and nothing in it has changed since. It records what Sovrasign deleted, the keys it destroyed and when backups expire.`,
+      };
     case "changed":
-      return { kind: "bad", title: t("del_changed_title"), line: t("del_changed_line") };
+      return {
+        kind: "bad",
+        title: "Certificate of deletion changed after it was sealed",
+        line: "This certificate of deletion is not what Sovrasign issued: its content differs from what was sealed. Download it again from your account or the deletion receipt's link.",
+      };
     default:
-      return { kind: "bad", title: t("s_invalid_title"), line: t("del_invalid_line") };
+      return {
+        kind: "bad",
+        title: "Seal not valid",
+        line: "The seal on this certificate of deletion does not verify, so it is not proof of what Sovrasign deleted.",
+      };
   }
 }
 
@@ -309,9 +342,9 @@ export function statusLine(report) {
   const env = report.envelope || {};
   const slots = (env.signers || []).length;
   const signed = (report.signatures || []).filter((s) => s.kind === "signed").length;
-  if (report.declined) return t("st_declined");
-  if (report.complete) return slots === 1 ? t("st_completed_single") : t("st_completed_all", { n: slots });
-  return t("st_waiting", { signed, total: slots });
+  if (report.declined) return "Declined: a signer declined, so this agreement is void.";
+  if (report.complete) return slots === 1 ? "Completed: the signer signed." : `Completed: all ${slots} signers signed.`;
+  return `Waiting for signatures: ${signed} of ${slots} signed.`;
 }
 
 /** The revisions in order: the preparer's, then each signer's. */
@@ -331,15 +364,16 @@ export function documentTimeLine(report) {
   const device = all.some((s) => s.time_source !== "tsa");
   if (last.existed_before) {
     const e = last.existed_before;
-    return t("dt_existed_before", { time: fmtTime(e.time), tsa: e.tsa_name || t("tsa_unknown") });
+    return `All signatures in this document existed before ${fmtTime(e.time)} (trusted timestamp, ${e.tsa_name || "unknown authority"}).`;
   }
-  return device ? t("dt_device") : null;
+  return device ? "No trusted timestamp yet: the signing times are the signers' device clocks, which nobody independent confirms." : null;
 }
 
 /** Where a trusted upper bound comes from, in words. */
 function boundSource(e) {
-  const tsa = e.tsa_name || t("tsa_unknown");
-  return e.source === "later-signature" ? t("bound_later", { tsa }) : t("bound", { tsa });
+  const tsa = e.tsa_name || "unknown authority";
+  if (e.source === "later-signature") return `trusted timestamp on a later signature, ${tsa}`;
+  return `trusted timestamp, ${tsa}`;
 }
 
 /**
@@ -361,19 +395,21 @@ export function revisionView(s, report, trust) {
   const env = report.envelope || {};
   const slot = (env.signers || []).find((x) => x.id === s.signer_id);
   const preparer = s.kind === "prepared";
-  const act = preparer ? "sent" : s.kind === "declined" ? "declined" : "signed";
-  const role = t(preparer ? "role_prepared" : s.kind === "declined" ? "role_declined" : "role_signed");
+  const role = preparer ? "Prepared and sent by" : s.kind === "declined" ? "Declined by" : "Signed by";
   const email = verifiedEmail(s);
-  const who = email || t("who_unverified");
+  const who = email || "Unverified identity";
   const given = (preparer ? env.created_by : slot?.name) || "";
-  const label = given && given !== email ? t(preparer ? "label_preparer" : "label_slot", { name: given }) : "";
+  const label = given && given !== email
+    ? preparer
+      ? `Gave the name “${given}” (typed by the sender, not verified)`
+      : `Slot named “${given}” by the sender (not verified)`
+    : "";
 
   const tags = [];
-  tags.push(s.valid ? { text: t("tag_valid"), kind: "ok" } : { text: t("tag_not_valid"), kind: "bad" });
+  tags.push(s.valid ? { text: "Valid", kind: "ok" } : { text: "Not valid", kind: "bad" });
   if (s.level) {
     const ours = (s.basis || []).some((b) => isOurs(b.issuer, trust));
-    const via = ours ? ` · ${t("via_service", { service: "Sovrasign" })}` : "";
-    tags.push({ text: `${s.level} ${levelName(s.level)}${via}`.trim(), kind: "level" });
+    tags.push({ text: `${s.level} ${LEVEL_NAMES[s.level] || ""}${ours ? " · via Sovrasign" : ""}`.trim(), kind: "level" });
   }
 
   // Identity: the evidence in its long form; without trusted evidence, who claimed it and why
@@ -381,40 +417,40 @@ export function revisionView(s, report, trust) {
   const identity = (s.basis || []).length
     ? s.basis.map((b) => evidenceText(b, s.idp_email, trust))
     : s.idp_email || s.idp_issuer
-      ? [t("id_stated", { email: s.idp_email || t("id_an_address"), provider: providerName(s.idp_issuer, trust) })]
+      ? [`${s.idp_email || "An address"}, as stated by ${providerName(s.idp_issuer, trust)}`]
       : [];
   const method = [...new Set((s.basis || []).map((b) => methodText(b, trust)).filter(Boolean))].join(", ");
-  const why = s.identity_trust && s.identity_trust !== "trusted" ? trustWhy(s.identity_trust) : "";
+  const why = s.identity_trust && s.identity_trust !== "trusted" ? TRUST_WHY[s.identity_trust] || `Identity: ${s.identity_trust}` : "";
 
   // Time.
+  const verb = preparer ? "Sent" : s.kind === "declined" ? "Declined" : "Signed";
   let time;
   let bounds = "";
   if (s.time_source === "tsa") {
-    const ts = s.timestamp || {};
-    time = t(`t_tsa_${act}`, {
-      time: fmtTime(ts.time || s.signed_at, { seconds: true }),
-      tsa: ts.tsa_name || s.existed_before?.tsa_name || t("tsa_unknown"),
-    });
+    const t = s.timestamp || {};
+    time = `${verb} ${fmtTime(t.time || s.signed_at, { seconds: true })} (trusted timestamp, ${t.tsa_name || s.existed_before?.tsa_name || "unknown authority"})`;
   } else {
-    const local =
-      s.local_signed_at && s.utc_offset && s.utc_offset !== "+00:00" ? t("t_local", { clock: localClock(s.local_signed_at), offset: s.utc_offset }) : "";
-    time = t(`t_dev_${act}`, { time: fmtTime(s.signed_at), local });
-    const after = s.token_issued_at ? fmtTime(s.token_issued_at) : "";
+    const local = s.local_signed_at && s.utc_offset && s.utc_offset !== "+00:00" ? `, ${localClock(s.local_signed_at)} at UTC${s.utc_offset}` : "";
+    time = `${verb} ${fmtTime(s.signed_at)}${local} (${preparer ? "sender" : "signer"}'s device clock, not independently confirmed)`;
+    const after = s.token_issued_at ? `after ${fmtTime(s.token_issued_at)} (sign-in token issued)` : "";
     if (s.existed_before) {
-      const before = { before: fmtTime(s.existed_before.time), source: boundSource(s.existed_before) };
-      bounds = after ? t("b_window", { after, ...before }) : t("b_before", before);
+      const before = `before ${fmtTime(s.existed_before.time)} (${boundSource(s.existed_before)})`;
+      bounds = `${TIME_WORDS.notTimestamped}. Made ${after ? `${after} and ` : ""}${before}.`;
     } else {
-      bounds = after ? t("b_none_after", { after }) : t("b_none");
+      bounds = `${TIME_WORDS.noTimestampYet}.${after ? ` Made ${after}.` : ""}`;
     }
   }
 
   // The drawing beside the caption (schema 6+): decoration, never who signed.
-  const drawing = s.drawing === "typed" ? t("drawing_typed") : s.drawing === "drawn" ? t("drawing_drawn") : "";
+  const drawing = {
+    typed: "The signature box shows a typed name, which is not a claim of identity: the sign-in above says who signed.",
+    drawn: "The signature box shows a hand-drawn signature; the sign-in above says who signed.",
+  }[s.drawing] || "";
 
   let consent = "";
   if (s.esign_consent) {
     const c = s.esign_consent;
-    consent = t("consent_line", { version: c.version, lang: c.lang, time: fmtTime(c.at) });
+    consent = `Agreed to electronic records and signatures (disclosure ${c.version}, ${c.lang}) on ${fmtTime(c.at)}.`;
   }
   return {
     role,
@@ -452,7 +488,7 @@ export function revisionCard(view) {
   if (view.bounds) details.push({ text: view.bounds, muted: true });
   if (view.drawing) details.push({ text: view.drawing, muted: true });
   if (view.consent) details.push({ text: view.consent, muted: true });
-  if (view.code) details.push({ text: t("sig_code_line", { code: view.code }), muted: true });
+  if (view.code) details.push({ text: `${view.code}: the code printed in this signature's box in the PDF.`, muted: true });
   return { alerts, details };
 }
 
@@ -463,18 +499,17 @@ export function revisionCard(view) {
 export function senderLine(report) {
   const prep = report.preparer;
   const email = prep ? verifiedEmail(prep) : "";
-  return email ? t("sent_by", { email }) : "";
+  return email ? `Sent by ${email}` : "";
 }
 
 /** A document timestamp in words. */
 export function stampView(d) {
-  const ts = d.timestamp || {};
-  const trusted = ts.verified && ts.signature_valid && ts.trusted;
-  const values = { time: fmtTime(ts.time, { seconds: true }), tsa: ts.tsa_name || t("tsa_unknown") };
+  const t = d.timestamp || {};
+  const trusted = t.verified && t.signature_valid && t.trusted;
   return {
     valid: !!d.valid,
-    line: t(d.added_validation_data ? "stamp_line_vd" : "stamp_line", values),
-    trust: trusted ? t("stamp_trusted") : ts.detail ? t("stamp_not_trusted_why", { detail: ts.detail }) : t("stamp_not_trusted"),
+    line: `${fmtTime(t.time, { seconds: true })} by ${t.tsa_name || "an unknown authority"}, covering every signature before it${d.added_validation_data ? " and the validation data" : ""}`,
+    trust: trusted ? "Trusted" : `Not trusted${t.detail ? `: ${t.detail}` : ""}`,
     detail: d.detail || "",
   };
 }
@@ -489,7 +524,7 @@ export function documentsView(report) {
   return ((report.envelope || {}).documents || []).map((d) => {
     const last = d.first_page + d.page_count;
     return {
-      line: d.page_count === 1 ? t("doc_page", { name: d.name, page: last }) : t("doc_pages", { name: d.name, from: d.first_page + 1, to: last }),
+      line: `${d.name} (${d.page_count === 1 ? `page ${last}` : `pages ${d.first_page + 1}–${last}`})`,
       sha256: d.source_digest || "",
     };
   });

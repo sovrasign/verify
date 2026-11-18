@@ -13,11 +13,7 @@
 // Done card, the completed copy, the sender's envelope page) opens /verify/#check=<id> and hands
 // the bytes over a BroadcastChannel, which only pages of the same origin can join. Nothing is
 // uploaded; the file goes from one tab of this browser to another.
-//
-// Ten languages: the words come from l10n/verify_<lang>.arb (i18n.js), the page's own
-// text from its data-l10n attributes; the visitor picks the language in the header.
 import {
-  countPdfSignatures,
   documentsView,
   documentTimeLine,
   errorVerdict,
@@ -33,13 +29,8 @@ import {
   verdict,
 } from "./words.js";
 import { checkSealWithList, findSeal } from "./seal.js";
-import { LANGS, NAMES, lang, pickLang, t, useCatalogs } from "./i18n.js";
-import EN from "./l10n-en.js";
-import { TrustList, browserStorage, trustForHost } from "./trust-list.js";
-import { TRUST as BUILT_TRUST } from "./trust-pins.js";
-
-// The pins apply on the hosts they name (production's own; trust-list.js trustForHost).
-const BUILD_TRUST = trustForHost(BUILT_TRUST, location.hostname);
+import { TrustList, browserStorage, statusWords } from "./trust-list.js";
+import { TRUST as BUILD_TRUST } from "./trust-pins.js";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -130,79 +121,6 @@ async function callOk(name, ...args) {
   return bytes;
 }
 
-// --- the page's languages -----------------------------------------------------------
-
-/** Load `code`'s words (its module is in the page's integrity list), then say everything again. */
-async function setLanguage(code, { keep = false } = {}) {
-  let cat = EN;
-  if (code !== "en") {
-    try {
-      cat = (await import(`./l10n-${code}.js`)).default;
-    } catch {
-      code = "en"; // a language that did not load: English
-    }
-  }
-  useCatalogs(code, cat, EN);
-  if (keep) {
-    // The choice stays in the address (?lang=), so a reload or a shared link keeps it; nothing is
-    // stored on the device (the cookie notice lists no item for this page's language).
-    try {
-      const u = new URL(location.href);
-      u.searchParams.set("lang", code);
-      history.replaceState(history.state, "", u);
-    } catch {
-      /* this visit only */
-    }
-  }
-  document.documentElement.lang = code;
-  applyStatic();
-  if (trust) setTrust(trust, trustSource);
-  sayTrustStatus();
-  if (handOffNote) $("handoff").textContent = handOffNote();
-  if (currentPdf) await runVerify({ focus: false });
-}
-
-/** The page's own text in the language in use (data-l10n, and data-l10n-touch on phones). */
-function applyStatic() {
-  const touch = matchMedia("(pointer: coarse)").matches;
-  for (const e of document.querySelectorAll("[data-l10n]")) {
-    if (e.id === "drop-text" && currentPdf) continue; // shows the file's name
-    e.textContent = t(touch && e.dataset.l10nTouch ? e.dataset.l10nTouch : e.dataset.l10n);
-  }
-  const select = $("lang");
-  if (select) select.value = lang();
-}
-
-function languageMenu() {
-  const select = $("lang");
-  for (const code of LANGS) {
-    const o = el("option", NAMES[code]);
-    o.value = code;
-    o.lang = code;
-    select.append(o);
-  }
-  select.value = lang();
-  select.addEventListener("change", () => setLanguage(select.value, { keep: true }));
-}
-
-/** The trust list's status line: a function, so a change of language says it again. */
-let trustStatus = () => "";
-function setTrustStatus(fn) {
-  trustStatus = fn;
-  sayTrustStatus();
-}
-const sayTrustStatus = () => {
-  $("trust-status").textContent = trustStatus();
-};
-
-/** The signed list's age warning and "Reload the page" (TrustList.status()), in the page's words. */
-function statusLines(s) {
-  const out = [];
-  if (s.updateApp) out.push(t("trust_update_page"));
-  if (s.stale) out.push(t("trust_stale", { n: s.ageDays }));
-  return out;
-}
-
 // --- the trust list ---------------------------------------------------------------------------
 
 /** The trust list never allows the engine's insecure development opt-in on this page. */
@@ -253,11 +171,11 @@ async function initTrust() {
       published = safe(s.list);
       signedStatus = s;
       usePublished();
-      setTrustStatus(() => {
-        const lines = statusLines(s);
-        if (outcome === "unreachable") lines.unshift(t(s.source === "cached" ? "trust_unreachable_saved" : "trust_unreachable_built"));
-        return lines.join(" ");
-      });
+      const lines = statusWords(s);
+      if (outcome === "unreachable") {
+        lines.unshift(`Sovrasign's trust list could not be fetched just now; this page uses ${s.source === "cached" ? "the copy saved on this device" : "the copy built into this page"}.`);
+      }
+      $("trust-status").textContent = lines.join(" ");
       return;
     }
   }
@@ -267,21 +185,21 @@ async function initTrust() {
     try {
       const resp = await fetch(url, { credentials: "omit", cache: "no-store" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const list = await resp.json();
-      if (!Array.isArray(list.issuers)) throw new Error(t("trust_not_a_list"));
-      published = safe(list);
+      const t = await resp.json();
+      if (!Array.isArray(t.issuers)) throw new Error("not a trust list");
+      published = safe(t);
       keep(published);
     } catch (e) {
-      why = e.message;
+      why = `Sovrasign's published trust list did not load (${e.message}).`;
       published = kept();
     }
   }
   if (published) {
     usePublished();
-    if (why) setTrustStatus(() => t("trust_failed_saved", { error: why }));
+    if (why) $("trust-status").textContent = `${why} Using the copy saved on this device.`;
   } else {
     setTrust(safe(JSON.parse(decoder.decode(await callOk("signpdf_well_known_trust")))), "builtin");
-    if (why) setTrustStatus(() => t("trust_failed_builtin", { error: why }));
+    if (why) $("trust-status").textContent = `${why} Using the engine's built-in list.`;
   }
 }
 
@@ -294,17 +212,16 @@ function usePublished() {
   setTrust(published, "published");
 }
 
-let trustSource = "";
-
-function setTrust(list, source) {
-  trust = list;
-  trustSource = source;
-  $("trust-source").textContent =
-    source === "published"
-      ? signedStatus
-        ? t("source_signed", { sequence: signedStatus.sequence, date: fmtDay(signedStatus.issuedAt) })
-        : t("source_published")
-      : t(`source_${source}`);
+function setTrust(t, source) {
+  trust = t;
+  $("trust-source").textContent = {
+    published: signedStatus
+      ? `This page uses Sovrasign's signed trust list ${signedStatus.sequence} (issued ${fmtDay(signedStatus.issuedAt)}), checked with the trust-list key built into this page.`
+      : "This page uses Sovrasign's published trust list.",
+    builtin: "This page uses the engine's built-in list of well-known providers.",
+    file: "This page uses a trust list you loaded, for this visit only.",
+    fetched: "This page uses the list below, with the keys just fetched, for this visit only.",
+  }[source];
   $("use-published").hidden = !published || source === "published";
   $("dev-trust").hidden = !isDevTrust(trust);
   renderIssuers();
@@ -317,51 +234,57 @@ function renderIssuers() {
     const li = el("li");
     li.append(el("strong", iss.name || providerName(iss.issuer, trust)));
     const apps = (iss.audiences || []).length;
-    const keys = t("issuer_keys", { n: (iss.keys || []).length });
-    li.append(el("span", ` — ${iss.issuer} — ${keys}, ${apps ? t("issuer_apps", { n: apps }) : t("issuer_no_app")}`, "muted"));
+    li.append(
+      el("span", ` — ${iss.issuer} — ${(iss.keys || []).length} key(s), ${apps ? `${apps} app(s)` : "no app"}`, "muted"),
+    );
     ul.append(li);
   }
-  ul.append(el("li", t("tsa_count", { n: (trust.tsa_anchors || []).length })));
+  ul.append(el("li", `Timestamp authorities: ${(trust.tsa_anchors || []).length}`));
 }
 
 async function fetchKeys() {
   const lines = [];
-  let list = trust;
-  for (const iss of list.issuers) {
+  let t = trust;
+  for (const iss of t.issuers) {
     if (!iss.jwks_uri) continue;
     try {
       const resp = await fetch(iss.jwks_uri, { credentials: "omit", cache: "no-store" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const jwks = new Uint8Array(await resp.arrayBuffer());
       const before = (iss.keys || []).length;
-      list = JSON.parse(decoder.decode(await callOk("signpdf_trust_add_jwks", encoder.encode(JSON.stringify(list)), encoder.encode(iss.issuer), jwks)));
-      const now = list.issuers.find((i) => i.issuer === iss.issuer).keys.length;
-      lines.push({ key: "fetch_new_keys", values: { name: iss.name || iss.issuer, n: now - before } });
+      t = JSON.parse(decoder.decode(await callOk("signpdf_trust_add_jwks", encoder.encode(JSON.stringify(t)), encoder.encode(iss.issuer), jwks)));
+      const now = t.issuers.find((i) => i.issuer === iss.issuer).keys.length;
+      lines.push(`${iss.name || iss.issuer}: ${now - before} new key(s)`);
     } catch (e) {
-      lines.push({ key: "fetch_not_fetched", values: { name: iss.name || iss.issuer, error: e.message } });
+      lines.push(`${iss.name || iss.issuer}: not fetched (${e.message})`);
     }
   }
-  setTrust(safe(list), "fetched");
-  setTrustStatus(() => lines.map((l) => t(l.key, l.values)).join(" · ") || t("fetch_none"));
+  setTrust(safe(t), "fetched");
+  $("trust-status").textContent = lines.join(" · ") || "No provider publishes its keys at a known address.";
   if (currentPdf) await runVerify();
 }
 
 async function loadTrustFile(file) {
+  const status = $("trust-status");
   try {
-    const list = JSON.parse(await file.text());
-    if (!Array.isArray(list.issuers)) throw new Error(t("trust_not_a_list"));
+    const t = JSON.parse(await file.text());
+    if (!Array.isArray(t.issuers)) throw new Error("not a trust list");
     // A trust list decides whose signatures this page believes: one from the wrong hands makes
     // forged documents look valid.
-    const sure = window.confirm(t("trust_confirm", { file: file.name }));
+    const sure = window.confirm(
+      "A trust list decides whose signatures this page believes.\n\n" +
+        "Load one only if you made it yourself or got it from someone you trust. " +
+        "Never load one because the sender of a document asks you to.\n\nLoad " + file.name + " for this visit?",
+    );
     if (!sure) {
-      setTrustStatus(() => t("trust_not_loaded"));
+      status.textContent = "Trust list not loaded.";
       return;
     }
-    setTrust(safe(list), "file");
-    setTrustStatus(() => t("trust_loaded", { file: file.name }));
+    setTrust(safe(t), "file");
+    status.textContent = `Loaded ${file.name}.`;
     if (currentPdf) await runVerify();
   } catch (e) {
-    setTrustStatus(() => t("trust_load_failed", { error: e.message }));
+    status.textContent = `Could not load the trust list: ${e.message}`;
   }
 }
 
@@ -389,18 +312,6 @@ function showVerdict(v) {
   box.className = `verdict ${v.kind}`;
   $("verdict-title").textContent = v.title;
   $("verdict-line").textContent = v.line;
-  // Where else to check a file (another service's PDF signatures; words.js OTHER_VERIFIERS).
-  const links = $("verdict-links");
-  links.replaceChildren();
-  for (const l of v.links || []) {
-    const a = el("a", l.text);
-    a.href = l.href;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    links.append(el("li"));
-    links.lastChild.append(a);
-  }
-  links.hidden = !(v.links || []).length;
 }
 
 let detailsCount = 0; // ids for each card's "Details" button and the lines it shows
@@ -429,8 +340,7 @@ function renderRevision(s, report) {
     toggle.type = "button";
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-controls", id);
-    toggle.append(el("span", t("details")));
-    toggle.setAttribute("aria-label", t("details_for", { name: label }));
+    toggle.append(el("span", "Details"), el("span", ` for ${label}`, "visually-hidden"));
     const body = el("div", undefined, "details-body");
     body.id = id;
     for (const d of card.details) body.append(el("p", d.text, d.muted ? "line small muted" : "line small"));
@@ -450,14 +360,14 @@ function renderTimestamps(report) {
   const stamps = report.document_timestamps || [];
   if (!stamps.length) return;
   const card = el("div", undefined, "card");
-  card.append(el("h2", t("stamps_title", { n: stamps.length })));
+  card.append(el("h2", stamps.length > 1 ? "Document timestamps" : "Document timestamp"));
   const ol = el("ol", undefined, "revisions");
   for (const d of stamps) {
     const v = stampView(d);
     const li = el("li");
     const who = el("div", undefined, "who");
     who.append(el("strong", v.line));
-    who.append(el("span", t(v.valid ? "tag_valid" : "tag_not_valid"), `tag ${v.valid ? "ok" : "bad"}`));
+    who.append(el("span", v.valid ? "Valid" : "Not valid", `tag ${v.valid ? "ok" : "bad"}`));
     li.append(who);
     li.append(el("p", v.trust, "line small muted"));
     if (v.detail) li.append(el("p", v.detail, "why"));
@@ -480,7 +390,7 @@ function renderList(box, title, items, cls) {
 function renderReport(report) {
   showVerdict(verdict(report));
   const env = report.envelope || {};
-  $("doc-title").textContent = env.title || currentName || t("doc_untitled");
+  $("doc-title").textContent = env.title || currentName || "Signed document";
   const summary = $("summary");
   summary.replaceChildren();
   summary.append(el("div", statusLine(report)));
@@ -489,11 +399,11 @@ function renderReport(report) {
   // An envelope of several documents, signed together as this one PDF.
   const docs = documentsView(report);
   if (docs.length) {
-    summary.append(el("div", t("docs_together", { n: docs.length })));
+    summary.append(el("div", `${docs.length} documents, signed together as this one PDF:`));
     const ol = el("ol", undefined, "documents");
     for (const d of docs) {
       const li = el("li", d.line);
-      const sha = el("div", `${t("doc_sha")} `, "muted");
+      const sha = el("div", "Original file SHA-256: ", "muted");
       sha.append(el("code", d.sha256));
       li.append(sha);
       ol.append(li);
@@ -505,7 +415,7 @@ function renderReport(report) {
   // The preparer's link back to the service that sent it (never part of the verdict).
   if (report.service_link) {
     const link = new URL(report.service_link);
-    const open = el("div", `${t("open_in_service")} `, "muted");
+    const open = el("div", "Open it in the service that sent it: ", "muted");
     const a = el("a", link.host);
     a.href = link.href;
     a.target = "_blank";
@@ -521,8 +431,8 @@ function renderReport(report) {
 
   const problems = $("problems");
   problems.replaceChildren();
-  renderList(problems, t("problems_failed"), report.messages || [], "problems");
-  renderList(problems, t("problems_warnings"), report.warnings || [], "warnings");
+  renderList(problems, "What failed", report.messages || [], "problems");
+  renderList(problems, "Warnings", report.warnings || [], "warnings");
 
   const audit = $("audit");
   audit.replaceChildren();
@@ -538,17 +448,17 @@ function renderReport(report) {
     tech.append(dd);
   };
   row("SHA-256", report.document_sha256);
-  row(t("tech_envelope"), env.envelope_id);
-  row(t("tech_size"), t("tech_bytes", { n: report.original_len }));
-  row(t("tech_pades"), report.pades_level);
-  row(t("tech_policy"), report.algorithm_policy?.version);
+  row("Envelope", env.envelope_id);
+  row("Size", `${report.original_len} bytes`);
+  row("PAdES level", report.pades_level);
+  row("Algorithm policy", report.algorithm_policy?.version);
   $("tech-report").hidden = false;
   $("raw").textContent = JSON.stringify(report, null, 2);
   $("certificate").hidden = false;
 }
 
 function renderError(error) {
-  showVerdict(errorVerdict(error, { pdfSignatures: countPdfSignatures(currentPdf) }));
+  showVerdict(errorVerdict(error));
   $("doc-title").textContent = currentName || "";
   for (const id of ["summary", "revisions", "timestamps", "problems", "audit", "tech"]) $(id).replaceChildren();
   $("certificate").hidden = true;
@@ -574,19 +484,19 @@ async function runSealCheck() {
   const deletion = s?.what === "deletion";
   const invoice = s?.what === "invoice";
   $("doc-title").textContent =
-    currentName || t(deletion ? "doc_title_deletion" : invoice ? "doc_title_invoice" : "doc_title_certificate");
+    currentName || (deletion ? "Certificate of deletion" : invoice ? "Invoice" : "Certificate of completion");
   for (const id of ["summary", "revisions", "timestamps", "problems", "audit", "tech"]) $(id).replaceChildren();
   if (s?.envelope && !invoice) {
-    $("summary").append(el("div", t(deletion ? "seal_certificate" : "seal_envelope", { id: s.envelope }), "muted"));
+    $("summary").append(el("div", `${deletion ? "Certificate" : "Envelope"} ${s.envelope}`, "muted"));
   }
   $("certificate").hidden = true;
   $("raw").textContent = s ? JSON.stringify(s, null, 2) : "";
 }
 
-async function runVerify({ focus = true } = {}) {
+async function runVerify() {
   if (findSeal(currentPdf)) {
     await runSealCheck();
-    if (focus) $("verdict").focus({ preventScroll: true });
+    $("verdict").focus({ preventScroll: true });
     return;
   }
   try {
@@ -597,7 +507,6 @@ async function runVerify({ focus = true } = {}) {
   } catch (e) {
     renderError(e);
   }
-  if (!focus) return;
   $("verdict").focus({ preventScroll: true });
   $("result").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
@@ -605,7 +514,7 @@ async function runVerify({ focus = true } = {}) {
 async function onBytes(bytes, name) {
   currentPdf = bytes;
   currentName = name || "";
-  $("drop-text").textContent = currentName || t("drop_picked");
+  $("drop-text").textContent = currentName || "Signed PDF";
   if (!trust) await trustReady;
   await runVerify();
 }
@@ -621,9 +530,6 @@ async function onFile(file) {
  * this origin can join the channel; the id in the address says which file is meant, so another
  * tab's hand-over is never mixed up with this one.
  */
-/** The hand-over note, as a function so a change of language says it again. */
-let handOffNote = null;
-
 function receiveHandOff() {
   const id = new URLSearchParams(location.hash.slice(1)).get("check");
   if (!id) return;
@@ -631,8 +537,7 @@ function receiveHandOff() {
   const note = $("handoff");
   if (!/^[A-Za-z0-9-]{8,64}$/.test(id) || typeof BroadcastChannel !== "function") return;
   note.hidden = false;
-  handOffNote = () => t("handoff_getting");
-  note.textContent = handOffNote();
+  note.textContent = "Getting the PDF from the page you came from…";
   const channel = new BroadcastChannel(CHANNEL);
   let got = false;
   let asks = 0;
@@ -640,8 +545,7 @@ function receiveHandOff() {
     if (got) return;
     if (asks++ >= 60) {
       channel.close();
-      handOffNote = () => t("handoff_none");
-      note.textContent = handOffNote();
+      note.textContent = "The page you came from did not send the PDF. Choose the file you saved instead.";
       return;
     }
     channel.postMessage({ type: "ready", id });
@@ -655,24 +559,22 @@ function receiveHandOff() {
     got = true;
     channel.close();
     const name = typeof m.name === "string" ? m.name.slice(0, 200) : "";
-    handOffNote = () => (name ? t("handoff_checking", { name }) : t("handoff_checking_unnamed"));
-    note.textContent = handOffNote();
+    note.textContent = `Checking ${name || "the PDF"} from the page you came from. It stays in this browser.`;
     onBytes(bytes, name);
   };
   ask();
 }
 
+// A phone or tablet: no dropping, so the drop zone just says "Choose".
+function followDevice() {
+  if (!matchMedia("(pointer: coarse)").matches) return;
+  for (const e of document.querySelectorAll("[data-touch]")) e.textContent = e.dataset.touch;
+}
+
 let trustReady;
 
-window.addEventListener("DOMContentLoaded", async () => {
-  // The visitor's language: ?lang= (the language menu sets it), else the browser's.
-  // On a phone or tablet the drop zone just says "Choose" (data-l10n-touch).
-  const asked = new URLSearchParams(location.search).get("lang");
-  const first = pickLang(asked, "", navigator.languages || [navigator.language]);
-  useCatalogs("en", EN, EN);
-  languageMenu();
-  if (first === "en") applyStatic();
-  else await setLanguage(first);
+window.addEventListener("DOMContentLoaded", () => {
+  followDevice();
   const drop = $("drop");
   $("pdf").addEventListener("change", (e) => onFile(e.target.files[0]));
   drop.addEventListener("dragover", (e) => {
@@ -690,7 +592,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("trust-file").addEventListener("change", (e) => loadTrustFile(e.target.files[0]));
   $("use-published").addEventListener("click", async () => {
     usePublished();
-    setTrustStatus(() => "");
+    $("trust-status").textContent = "";
     if (currentPdf) await runVerify();
   });
   $("export-trust").addEventListener("click", () => {
@@ -708,7 +610,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
   trustReady = initTrust().catch((e) => {
-    setTrustStatus(() => t("trust_failed", { error: e.message }));
+    $("trust-status").textContent = `The trust list did not load: ${e.message}`;
   });
   receiveHandOff();
 });
