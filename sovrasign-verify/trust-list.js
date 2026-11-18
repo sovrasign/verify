@@ -321,6 +321,19 @@ export class TrustList {
   }
 }
 
+/**
+ * This build's trust (trust-pins.js: `{env, pins, bundle, hosts}`) for a page served from `host`:
+ * as built when `hosts` is empty or names `host`, else a build without pins. Production's pins name
+ * production's hosts (trust/pins/production.json): the same release image serves staging, whose
+ * list is signed by staging's own key, and there the page keeps its behaviour before rather
+ * than refusing that list. Only ever narrows what a page believes.
+ */
+export function trustForHost(trust, host) {
+  const hosts = trust?.hosts || [];
+  if (!trust?.pins?.length || !hosts.length || hosts.includes(String(host || "").toLowerCase())) return trust;
+  return { env: "none", pins: [], bundle: null, hosts: [] };
+}
+
 /** The status's sentences in English: the age warning and "Update the app" (or none). */
 export function statusWords(s, { app = "this page" } = {}) {
   const out = [];

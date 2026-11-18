@@ -24,34 +24,37 @@
   <!-- The brand tile (brand/sovrasign/icon/favicon.svg, the app's: build.mjs puts it in place of
        the tile comment, inline so the page loads nothing else). It links to the Sovrasign home page. -->
   <!-- Header and footer like the site's (web/site/src/lib/layout.mjs, bf-verifier-page-look): links to
-       the site's pages on the same host (../site/), which build.mjs allows as the only links out. -->
+       the site's pages on the same host (../site/), which build.mjs allows as the only links out.
+       Ten languages: verify.js puts the words of l10n/verify_<lang>.arb into every element
+       with data-l10n (data-l10n-touch on phones); the English here is the first paint. -->
   <header class="top">
     <div class="top-inner">
       <p class="brand"><a class="home" href="../site/"><!--tile--><span>Sovrasign</span></a> <strong>Verify</strong></p>
       <ul class="top-nav">
-        <li><a href="../site/verify-a-document/">How checking works</a></li>
-        <li><a href="../site/help/">Help</a></li>
+        <li><a href="../site/verify-a-document/" data-l10n="nav_how">How checking works</a></li>
+        <li><a href="../site/help/" data-l10n="nav_help">Help</a></li>
+        <li><label class="lang"><span class="visually-hidden" data-l10n="language_label">Language</span><select id="lang"></select></label></li>
       </ul>
     </div>
   </header>
 
   <main>
     <section class="intro" aria-labelledby="intro-h">
-      <h1 id="intro-h">Check a signed PDF</h1>
-      <p>See who signed it, how each signer proved who they are, and that nothing changed after
-        signing. <strong>Your file never leaves your device</strong>: the check runs in this
-        browser.</p>
+      <h1 id="intro-h" data-l10n="intro_title">Check a signed PDF</h1>
+      <p><span data-l10n="intro_lead">See who signed it, how each signer proved who they are, and that
+        nothing changed after signing.</span> <strong data-l10n="intro_private">Your file never leaves
+        your device: the check runs in this browser.</strong></p>
     </section>
 
-    <p class="notice" id="dev-trust" hidden>This trust list includes the test sign-in, which lets
+    <p class="notice" id="dev-trust" data-l10n="dev_trust" hidden>This trust list includes the test sign-in, which lets
       anyone sign as anyone. Development only: a valid result here proves nothing about a person.</p>
 
     <section class="card" aria-labelledby="pick-h">
-      <h2 id="pick-h" class="visually-hidden">Choose a signed PDF</h2>
+      <h2 id="pick-h" class="visually-hidden" data-l10n="pick_title">Choose a signed PDF</h2>
       <label class="drop" id="drop">
-        <input type="file" id="pdf" accept="application/pdf,.pdf">
-        <span class="drop-main" id="drop-text" data-touch="Choose a signed PDF">Drop a signed PDF here, or choose a file</span>
-        <span class="drop-sub">It is read on this device and never uploaded.</span>
+        <input type="file" id="pdf" accept="application/pdf,.pdf" aria-labelledby="drop-text" aria-describedby="drop-sub">
+        <span class="drop-main" id="drop-text" data-l10n="drop_main" data-l10n-touch="drop_main_touch">Drop a signed PDF here, or choose a file</span>
+        <span class="drop-sub" id="drop-sub" data-l10n="drop_sub">It is read on this device and never uploaded.</span>
       </label>
       <p id="handoff" class="muted" role="status" hidden></p>
     </section>
@@ -60,18 +63,19 @@
       <div id="verdict" class="verdict" tabindex="-1">
         <h2 id="verdict-title"></h2>
         <p id="verdict-line"></p>
+        <ul id="verdict-links" class="verdict-links" hidden></ul>
       </div>
 
       <div class="card" id="summary-card">
         <h2 id="doc-title"></h2>
         <div id="summary"></div>
         <div class="actions">
-          <button id="certificate" type="button">Download the certificate of completion</button>
+          <button id="certificate" type="button" data-l10n="certificate_button">Download the certificate of completion</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>Signers</h2>
+        <h2 data-l10n="signers_title">Signers</h2>
         <ol id="revisions" class="revisions"></ol>
       </div>
 
@@ -79,31 +83,31 @@
       <div id="problems"></div>
 
       <details class="card">
-        <summary>Activity recorded in the document</summary>
+        <summary data-l10n="activity_title">Activity recorded in the document</summary>
         <ol id="audit" class="audit"></ol>
       </details>
     </section>
 
     <details class="card" id="technical">
-      <summary>Technical details and trust list</summary>
+      <summary data-l10n="technical_title">Technical details and trust list</summary>
       <div id="technical-body">
-        <h3>Trusted sign-in providers</h3>
-        <p class="muted">A signer's identity counts only if the provider key that vouched for them
-          is in this trust list. <span id="trust-source"></span></p>
+        <h3 data-l10n="providers_title">Trusted sign-in providers</h3>
+        <p class="muted"><span data-l10n="providers_text">A signer's identity counts only if the provider key
+          that vouched for them is in this trust list.</span> <span id="trust-source"></span></p>
         <ul id="issuers" class="issuers"></ul>
         <div class="actions">
-          <button id="fetch-keys" type="button">Fetch the providers' current keys</button>
-          <button id="load-trust" type="button" class="secondary">Load a trust.json</button>
+          <button id="fetch-keys" type="button" data-l10n="fetch_keys">Fetch the providers' current keys</button>
+          <button id="load-trust" type="button" class="secondary" data-l10n="load_trust">Load a trust.json</button>
           <input type="file" id="trust-file" accept="application/json,.json" hidden>
-          <button id="export-trust" type="button" class="secondary">Export this trust list</button>
-          <button id="use-published" type="button" class="secondary" hidden>Use Sovrasign's published list</button>
+          <button id="export-trust" type="button" class="secondary" data-l10n="export_trust">Export this trust list</button>
+          <button id="use-published" type="button" class="secondary" data-l10n="use_published" hidden>Use Sovrasign's published list</button>
         </div>
         <p id="trust-status" class="muted" role="status"></p>
         <div id="tech-report" hidden>
-          <h3>Report</h3>
+          <h3 data-l10n="report_title">Report</h3>
           <dl id="tech" class="tech"></dl>
           <details>
-            <summary>Raw report (JSON)</summary>
+            <summary data-l10n="raw_report">Raw report (JSON)</summary>
             <pre id="raw" tabindex="0" aria-label="Raw report"></pre>
           </details>
         </div>
@@ -113,12 +117,12 @@
 
   <footer class="bottom">
     <div class="bottom-inner">
-      <p>Sovrasign Verify runs in your browser. It doesn’t send your document anywhere.</p>
-      <p class="credit">Sovrasign Verify · open source</p>
+      <p data-l10n="footer_runs">Sovrasign Verify runs in your browser. It doesn’t send your document anywhere.</p>
+      <p class="credit" data-l10n="footer_credit">Sovrasign Verify · open source</p>
       <ul class="legal">
-        <li><a href="../site/legal/terms/">Terms of service</a></li>
-        <li><a href="../site/legal/privacy/">Privacy policy</a></li>
-        <li><a href="../site/legal/">All legal documents</a></li>
+        <li><a href="../site/legal/terms/" data-l10n="legal_terms">Terms of service</a></li>
+        <li><a href="../site/legal/privacy/" data-l10n="legal_privacy">Privacy policy</a></li>
+        <li><a href="../site/legal/" data-l10n="legal_all">All legal documents</a></li>
       </ul>
     </div>
   </footer>

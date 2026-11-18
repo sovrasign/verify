@@ -20,6 +20,20 @@ rm -rf "$out"
 mkdir -p "$out"
 cp "$here"/sovrasign-verify/*.js "$here"/sovrasign-verify/*.css "$here/sovrasign-verify/index.template.html" "$out/"
 cp "$wasm" "$out/signpdf_wasm.wasm"
+# The page's ten languages: each catalog sovrasign-verify/l10n/verify_<lang>.arb becomes a module of
+# the folder, l10n-<lang>.js, so sri.mjs lists it with the others (as the service's build does).
+node - "$here/sovrasign-verify/l10n" "$out" <<'EOF_L10N'
+const fs = require("fs"), path = require("path");
+const [dir, out] = process.argv.slice(-2);
+for (const f of fs.readdirSync(dir)) {
+  const m = /^verify_([a-z]{2})\.arb$/.exec(f);
+  if (!m) continue;
+  const arb = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+  const cat = Object.fromEntries(Object.entries(arb).filter(([k]) => !k.startsWith("@")));
+  fs.writeFileSync(path.join(out, `l10n-${m[1]}.js`), `export default ${JSON.stringify(cat)};
+`);
+}
+EOF_L10N
 node "$here/scripts/sri.mjs" "$out" >/dev/null
 rm "$out/index.template.html"
 echo "Built $out: serve it with any static file server, e.g. python3 -m http.server -d $out 8080"
