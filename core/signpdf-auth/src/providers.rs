@@ -8,6 +8,10 @@
 
 use crate::error::{AuthError, Result};
 
+/// The built-in Google client's secret, written by build.rs (empty when the build had none).
+const GOOGLE_CLIENT_SECRET: &str =
+    include_str!(concat!(env!("OUT_DIR"), "/google_client_secret.txt"));
+
 /// SignPDF's own app registration with a provider — what lets a user sign in without registering
 /// anything themselves. Its `client_id` becomes the `aud` of every token minted through it, and
 /// it is the only application a verifier's default trust store accepts for that provider: a
@@ -77,9 +81,10 @@ impl Provider {
     pub fn builtin_client(&self) -> Option<BuiltinClient> {
         match self {
             // Google Cloud "Desktop app" client: loopback redirects on any port. Its secret is kept
-            // out of the repository and compiled in from `SIGNPDF_GOOGLE_CLIENT_SECRET` (see
-            // build.rs); a build made without it has no built-in Google sign-in.
-            Provider::Google => option_env!("SIGNPDF_GOOGLE_CLIENT_SECRET")
+            // out of the repository and compiled in from `SIGNPDF_GOOGLE_CLIENT_SECRET` (build.rs
+            // writes it to a file in OUT_DIR, empty without one); a build made without it has no
+            // built-in Google sign-in.
+            Provider::Google => Some(GOOGLE_CLIENT_SECRET)
                 .filter(|secret| !secret.is_empty())
                 .map(|secret| BuiltinClient {
                     client_id: signpdf_core::SIGNPDF_GOOGLE_CLIENT_ID,
