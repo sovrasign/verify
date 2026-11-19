@@ -1,0 +1,5 @@
+# Code owners of Sovrasign Verify. A pull request needs a code owner's review before it is merged
+# (the main branch's ruleset requires it). While the project has one maintainer, that is the
+# repository owner, for every path.
+
+* @ffrachon
