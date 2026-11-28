@@ -61,11 +61,21 @@ node scripts/sri.mjs "$out" >/dev/null
 rm "$out/index.template.html"
 
 # The specification and the CC0 test vectors, as one tarball with fixed metadata (the same
-# bytes from the same commit).
+# bytes from the same commit). The fixed metadata needs GNU tar: macOS ships bsdtar, which has no
+# --mtime or --format=gnu, so there it takes Homebrew's `gtar` (brew install gnu-tar). The Pages
+# mirror itself is built on Linux (GNU tar and GNU gzip); another gzip may compress differently.
+if tar --version 2>/dev/null | grep -q 'GNU tar'; then
+  gnutar=tar
+elif command -v gtar >/dev/null 2>&1; then
+  gnutar=gtar
+else
+  echo "build-pages-site.sh needs GNU tar for a reproducible tarball (macOS: brew install gnu-tar)" >&2
+  exit 2
+fi
 epoch=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
 git ls-files -z -- spec LICENSES REUSE.toml core/signpdf-core/tests/corpus core/signpdf-core/tests/attack \
-  | sort -z \
-  | tar --null -T - --owner=0 --group=0 --numeric-owner --mtime="@$epoch" --format=gnu -cf - \
+  | LC_ALL=C sort -z \
+  | "$gnutar" --null -T - --owner=0 --group=0 --numeric-owner --mtime="@$epoch" --format=gnu -cf - \
   | gzip -n >"$out/signpdf-test-vectors.tar.gz"
 
 commit=$(git rev-parse HEAD)
@@ -91,5 +101,6 @@ toolchain=$(tr -d ' \r\n' <scripts/wasm-toolchain)
 } >"$out/BUILD.md"
 
 cd "$out"
-find . -type f ! -name SHA256SUMS -printf '%P\n' | LC_ALL=C sort | xargs sha256sum | sed 's/ \*/  /' >SHA256SUMS
+# Portable find (no GNU -printf) and sha256sum (coreutils, macOS 15 and later).
+find . -type f ! -name SHA256SUMS | sed 's|^\./||' | LC_ALL=C sort | xargs sha256sum | sed 's/ \*/  /' >SHA256SUMS
 cat SHA256SUMS

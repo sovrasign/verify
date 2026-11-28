@@ -108,26 +108,43 @@ pub fn decode_envelope(bytes: &[u8]) -> Result<Envelope> {
              and is not supported (this build reads versions {OLDEST_SCHEMA_VERSION} to \
              {SCHEMA_VERSION}); re-prepare the source document."
         ))),
-        VersionSupport::Supported => match version {
-            3 => v3::decode(bytes),
-            4 => v4::decode(bytes),
-            5 => v5::decode(bytes),
-            6 => v6::decode(bytes),
-            7 => v7::decode(bytes),
-            8 => v8::decode(bytes),
-            9 => v9::decode(bytes),
-            10 => v10::decode(bytes),
-            11 => v11::decode(bytes),
-            // `support` and this table must list the same versions.
-            v => Err(SignPdfError::Workflow(format!(
-                "internal error: no decoder for supported envelope schema version {v}"
-            ))),
-        },
+        VersionSupport::Supported => decode_supported(version, bytes).and_then(|env| {
+            refuse_record_initials(&env)?;
+            Ok(env)
+        }),
+    }
+}
+
+/// Decode an envelope of supported version `version` with that version's decoder.
+fn decode_supported(version: u64, bytes: &[u8]) -> Result<Envelope> {
+    match version {
+        3 => v3::decode(bytes),
+        4 => v4::decode(bytes),
+        5 => v5::decode(bytes),
+        6 => v6::decode(bytes),
+        7 => v7::decode(bytes),
+        8 => v8::decode(bytes),
+        9 => v9::decode(bytes),
+        10 => v10::decode(bytes),
+        11 => v11::decode(bytes),
+        12 => v12::decode(bytes),
+        // `support` and this table must list the same versions.
+        v => Err(SignPdfError::Workflow(format!(
+            "internal error: no decoder for supported envelope schema version {v}"
+        ))),
     }
 }
 
 /// Encode `env` in its own schema version (see the module rule: an envelope keeps its version).
 pub fn encode_envelope(env: &Envelope) -> Result<Vec<u8>> {
+    if env.schema_version < SIGNER_INITIALS_FROM
+        && env.signatures.iter().any(|r| r.initials.is_some())
+    {
+        return Err(SignPdfError::Workflow(format!(
+            "a version-{} envelope cannot keep a signer's chosen initials",
+            env.schema_version
+        )));
+    }
     match env.schema_version {
         3 => v3::encode(env),
         4 => v4::encode(env),
@@ -138,6 +155,7 @@ pub fn encode_envelope(env: &Envelope) -> Result<Vec<u8>> {
         9 => v9::encode(env),
         10 => v10::encode(env),
         11 => v11::encode(env),
+        12 => v12::encode(env),
         v if support(u64::from(v)) == VersionSupport::Newer => {
             Err(newer_version_error(u64::from(v)))
         }
@@ -414,11 +432,9 @@ mod v10 {
 /// A signature box shows the signer's drawing (or, without one, the name) large across the box
 /// with `Sig <code> · <time> · via <provider>` and the name in one small row under it
 /// ([`crate::pades::BoxLook::Hero`]), and the document-ID stamp is sized from Helvetica's own
-/// glyph widths ([`crate::pades::StampLook::Measured`]). Experimental: it may change in place
-/// before the first hosted release. It is the shape of today's [`Envelope`], so it decodes and
-/// encodes directly. Once a version is stable, its module keeps reading and writing its own JSON
-/// shape when the model changes, mapping it to and from the new model without losing anything
-/// its signatures cover (as [`v3`] does).
+/// glyph widths ([`crate::pades::StampLook::Measured`]). Its documents are on hosts that ran this
+/// version (November 2026), so they keep verifying with the letters of the slot's name
+/// (`name-v1`).
 mod v11 {
     use super::*;
 
@@ -432,25 +448,90 @@ mod v11 {
     }
 }
 
-/// Decode an envelope of version 9 or later, which must name its initials rule.
+/// Version 12 (November 2026): version 11 whose signers choose their initials. The envelope's
+/// `initials_rule` is `signer-v1` (and only that), and a signed record whose signer has an
+/// initials stamp keeps the letters they chose (`initials`, 1 to 3 letters,
+/// [`crate::initials::check_signer_initials`]). Experimental: it may change in place before
+/// documents of it are on a hosted service. It is the shape of today's [`Envelope`], so it
+/// decodes and encodes directly. Once a version is stable, its module keeps reading and writing
+/// its own JSON shape when the model changes, mapping it to and from the new model without
+/// losing anything its signatures cover (as [`v3`] does).
+mod v12 {
+    use super::*;
+
+    pub(super) fn decode(bytes: &[u8]) -> Result<Envelope> {
+        let value = levels_json(bytes, 12)?;
+        decode_with_initials_rule(value, 12)
+    }
+
+    pub(super) fn encode(env: &Envelope) -> Result<Vec<u8>> {
+        encode_with_initials_rule(env, 12)
+    }
+}
+
+/// The first version whose signers choose their initials (`signer-v1`, records' `initials`).
+const SIGNER_INITIALS_FROM: u32 = 12;
+
+/// Decode an envelope of version 9 or later, which must name the initials rule of its version.
 fn decode_with_initials_rule(value: serde_json::Value, version: u32) -> Result<Envelope> {
     let env: Envelope =
         serde_json::from_value(value).map_err(|e| invalid(version, e.to_string()))?;
     debug_assert_eq!(env.schema_version, version);
-    if env.initials_rule.is_none() {
-        return Err(invalid(version, "it names no 'initials_rule'".into()));
+    match env.initials_rule {
+        None => return Err(invalid(version, "it names no 'initials_rule'".into())),
+        Some(rule) if rule != rule_of_version(version) => {
+            return Err(invalid(
+                version,
+                format!(
+                    "it names the initials rule '{}', and version {version} has '{}'",
+                    rule.as_str(),
+                    rule_of_version(version).as_str()
+                ),
+            ))
+        }
+        Some(_) => {}
     }
     Ok(env)
 }
 
-/// Encode an envelope of version 9 or later, which must name its initials rule.
+/// Encode an envelope of version 9 or later, which must name the initials rule of its version.
 fn encode_with_initials_rule(env: &Envelope, version: u32) -> Result<Vec<u8>> {
-    if env.initials_rule.is_none() {
-        return Err(SignPdfError::Workflow(format!(
+    match env.initials_rule {
+        None => Err(SignPdfError::Workflow(format!(
             "a version-{version} envelope names its initials rule, and this one has none"
-        )));
+        ))),
+        Some(rule) if rule != rule_of_version(version) => Err(SignPdfError::Workflow(format!(
+            "a version-{version} envelope derives initials by '{}', not '{}'",
+            rule_of_version(version).as_str(),
+            rule.as_str()
+        ))),
+        Some(_) => Ok(serde_json::to_vec(env)?),
     }
-    Ok(serde_json::to_vec(env)?)
+}
+
+/// The one initials rule of version `version` (9 or later): `name-v1` up to 11, `signer-v1` from
+/// 12. A version names exactly one, so a document cannot claim another version's rule.
+fn rule_of_version(version: u32) -> crate::initials::InitialsRule {
+    if version >= SIGNER_INITIALS_FROM {
+        crate::initials::InitialsRule::SignerV1
+    } else {
+        crate::initials::InitialsRule::NameV1
+    }
+}
+
+/// Signature records keep the signer's chosen initials only from version 12: a record of an
+/// older version that keeps some is not of its version.
+fn refuse_record_initials(env: &Envelope) -> Result<()> {
+    if env.schema_version < SIGNER_INITIALS_FROM
+        && env.signatures.iter().any(|r| r.initials.is_some())
+    {
+        return Err(invalid(
+            env.schema_version,
+            "a signature record keeps chosen 'initials', which only version 12 and later have"
+                .into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Versions before 10 draw the legacy stamp: a document naming a stamp word and colour is not of
@@ -1090,8 +1171,58 @@ mod tests {
         .unwrap();
         env.schema_version = v;
         if v >= 9 {
-            env.initials_rule = Some(crate::initials::InitialsRule::NameV1);
+            env.initials_rule = Some(rule_of_version(v));
         }
         env
+    }
+
+    #[test]
+    fn only_version_12_lets_signers_choose_their_initials() {
+        use crate::initials::InitialsRule;
+        let record: crate::model::SignatureRecord = serde_json::from_value(serde_json::json!({
+            "signer_id": "s1", "fingerprint": "", "public_key": "", "algorithm": "",
+            "signed_at": "", "doc_digest": "", "signed_prefix_len": 0, "signature": "",
+            "revision": 0, "initials": "JvB",
+        }))
+        .unwrap();
+        let mut env = blank(12);
+        env.signatures.push(record);
+        let bytes = encode_envelope(&env).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["initials_rule"], "signer-v1");
+        assert_eq!(json["signatures"][0]["initials"], "JvB");
+        assert_eq!(decode_envelope(&bytes).unwrap(), env);
+        // Version 12 names signer-v1 and nothing else; versions 9 to 11 name-v1 and nothing else.
+        let mut named = env.clone();
+        named.initials_rule = Some(InitialsRule::NameV1);
+        assert!(encode_envelope(&named).is_err());
+        let mut j = json.clone();
+        j["initials_rule"] = "name-v1".into();
+        let err = decode_envelope(j.to_string().as_bytes()).unwrap_err();
+        assert!(err.to_string().contains("name-v1"), "{err}");
+        for v in 9..=11 {
+            let mut old = blank(v);
+            old.initials_rule = Some(InitialsRule::SignerV1);
+            assert!(encode_envelope(&old).is_err(), "v{v}");
+            let mut j =
+                serde_json::from_slice::<serde_json::Value>(&encode_envelope(&blank(v)).unwrap())
+                    .unwrap();
+            j["initials_rule"] = "signer-v1".into();
+            let err = decode_envelope(j.to_string().as_bytes()).unwrap_err();
+            assert!(err.to_string().contains("signer-v1"), "v{v}: {err}");
+        }
+        // A record of an older version keeps no chosen initials, either way.
+        for v in 3..=11 {
+            let mut old = blank(v);
+            old.signatures = env.signatures.clone();
+            let err = encode_envelope(&old).unwrap_err().to_string();
+            assert!(err.contains("initials"), "v{v}: {err}");
+            let mut j =
+                serde_json::from_slice::<serde_json::Value>(&encode_envelope(&blank(v)).unwrap())
+                    .unwrap();
+            j["signatures"] = json["signatures"].clone();
+            let err = decode_envelope(j.to_string().as_bytes()).unwrap_err();
+            assert!(err.to_string().contains("initials"), "v{v}: {err}");
+        }
     }
 }

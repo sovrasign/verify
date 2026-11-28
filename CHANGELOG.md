@@ -14,6 +14,14 @@ While a version is being prepared its heading says `unreleased`; tagging it give
 
 ## [0.3.0] - unreleased
 
+- Schema 12, which `prepare` now writes: each signer chooses their initials (rule `signer-v1`).
+  A signer gives 1 to 3 letters the stamp font draws (`SignRequest.initials`, `signpdf sign
+  --initials`; without them, the letters of their name as the preparer typed it). Their signature
+  record keeps them, their revision's signature covers them, and the verifier checks every
+  initials stamp against that record (`stamp_mismatch`). The report gives each signer's
+  `initials`. Versions 3 to 11 verify and sign as before, under their own rules (`name-v1` and
+  the email rule); the corpus gains a v12 set (`spec/envelope-format.md` §4.6,
+  `spec/vectors/initials-signer-v1.json`).
 - RSA signatures (identity-provider tokens, TSA certificates) are verified with rsa 0.10.0, the
   stable release, instead of its release candidate 0.10.0-rc.19. It fixes RUSTSEC-2023-0071 (a
   timing side channel in private-key operations, which the engine never performs outside its

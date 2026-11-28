@@ -495,12 +495,11 @@ fn the_newest_version_has_number_fields_and_a_verify_at_stamp_in_the_corpus() {
 }
 
 #[test]
-fn the_newest_version_has_initials_from_slot_names_in_the_corpus() {
-    // From version 9 the envelope names its initials rule and the further initials fields hold
-    // the letters of the slot's name: a change to the rule must break a fixture, not a customer's
-    // document. `signpdf demo` names its signers "Alice Example" and "Bob Builder" (whose
-    // addresses alone would give "A" and "B") and gives each an initials field besides their
-    // signature field in its envelope of several documents.
+fn the_newest_version_has_signer_chosen_initials_in_the_corpus() {
+    // From version 12 each signer's record keeps the initials they chose (signer-v1) and their
+    // further initials fields hold them: a change to the rule must break a fixture, not a
+    // customer's document. In `signpdf demo`'s envelope of several documents Bob chooses "BvB"
+    // and Alice keeps the starting letters of her name, "AE" (her address alone would give "A").
     let mut seen = std::collections::BTreeSet::new();
     for set in fixture_sets()
         .into_iter()
@@ -510,7 +509,12 @@ fn the_newest_version_has_initials_from_slot_names_in_the_corpus() {
         for pdf_path in set.pdfs() {
             let report = verify(&std::fs::read(&pdf_path).unwrap(), &trust).unwrap();
             let env = report.envelope.as_ref().unwrap();
-            assert!(env.initials_rule.is_some(), "{}", pdf_path.display());
+            assert_eq!(
+                env.initials_rule,
+                Some(signpdf_core::initials::InitialsRule::SignerV1),
+                "{}",
+                pdf_path.display()
+            );
             if !report.valid {
                 continue;
             }
@@ -520,14 +524,23 @@ fn the_newest_version_has_initials_from_slot_names_in_the_corpus() {
                 .filter(|f| f.field_type == FieldType::Initials)
             {
                 if let Some(v) = &f.value {
+                    // The stamp is the letters its signer's record keeps, and the report says so.
+                    let rec = env
+                        .signatures
+                        .iter()
+                        .find(|r| r.signer_id == f.assigned_signer)
+                        .unwrap();
+                    assert_eq!(rec.initials.as_ref(), Some(v), "{}", pdf_path.display());
+                    assert!(report.signatures.iter().any(|s| &s.initials == v));
                     seen.insert(v.clone());
                 }
             }
         }
     }
     assert!(
-        seen.contains("AE") && seen.contains("BB"),
-        "the v{SCHEMA_VERSION} corpus has initials {seen:?}, not AE and BB: add a fixture set          from a commit whose demo names its signers in full (scripts/make-schema-corpus.sh)"
+        seen.contains("AE") && seen.contains("BvB"),
+        "the v{SCHEMA_VERSION} corpus has initials {seen:?}, not AE and BvB: add a fixture set \
+         from a commit whose demo lets Bob choose his (scripts/make-schema-corpus.sh)"
     );
 }
 

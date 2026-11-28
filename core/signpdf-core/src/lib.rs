@@ -165,9 +165,11 @@ pub use workflow::{
 /// v10 lets the preparing host choose the document-ID stamp's word and colour (`stamp`); v11
 /// draws the signature box with the signer's drawing large across it and the details in one small
 /// row under it ([`pades::BoxLook::Hero`]), and sizes the document-ID stamp from Helvetica's real
-/// glyph widths ([`pades::StampLook::Measured`]), so a long id no longer runs past its box.
+/// glyph widths ([`pades::StampLook::Measured`]), so a long id no longer runs past its box; v12
+/// lets each signer choose their initials (rule `signer-v1`, [`initials`]): 1 to 3 letters kept
+/// in their own signature record and stamped in their further initials fields.
 /// See [`schema`] for the versions this build reads.
-pub const SCHEMA_VERSION: u32 = 11;
+pub const SCHEMA_VERSION: u32 = 12;
 
 /// Register the clock the engine reads on `wasm32-unknown-unknown`, which has none of its own
 /// (`std::time::SystemTime::now` traps there). The browser signer registers the page's

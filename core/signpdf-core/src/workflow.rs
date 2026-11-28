@@ -177,6 +177,14 @@ pub struct SignRequest {
     /// they agreed to its disclosure: written into the signer's audit entry (signed or
     /// declined). The engine checks its form only ([`EsignConsent::validate`]).
     pub esign_consent: Option<EsignConsent>,
+    /// The initials the signer chose (envelope initials rule `signer-v1`, schema version 12):
+    /// 1 to 3 letters the stamp font draws ([`initials::check_signer_initials`]; a host sends
+    /// them composed, NFC). Stamped in each of the signer's further initials fields and kept in
+    /// their signature record. Without them the engine uses [`initials::signer_v1_default`] (the
+    /// letters of the slot's name), and refuses to sign when that gives none. Ignored when the
+    /// signer has no further initials field, declines, or the envelope derives its letters
+    /// (`name-v1` and older rules): a host shows the field only under `signer-v1`.
+    pub initials: Option<String>,
 }
 
 /// Outcome of checking an embedded RFC 3161 timestamp.
@@ -309,6 +317,14 @@ pub struct SignatureStatus {
     /// not record it. Decoration either way: the caption, not the drawing, says who signed.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub drawing: String,
+    /// The initials in the signer's signed record (initials rule `signer-v1`, envelope schema
+    /// version 12), stamped in their further initials fields: letters the signer's own signature
+    /// covers, whether they typed them or kept the starting value their host offered. They are
+    /// not checked against the slot's name or the identity. Empty when the record keeps none (no
+    /// such field, a decline, or an older version, whose letters are derived from the slot's
+    /// name or the email address).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub initials: String,
 }
 
 /// Trusted evidence that a revision's signature existed by a time: a trusted RFC 3161 timestamp
@@ -1076,8 +1092,9 @@ fn prepare_inner(
         audit_log: Vec::new(),
         service_link: request.service_link.clone(),
         verify_at: request.verify_at.clone(),
-        // Every envelope this build prepares is of SCHEMA_VERSION (10), which names its rule.
-        initials_rule: Some(InitialsRule::NameV1),
+        // Every envelope this build prepares is of SCHEMA_VERSION (12): the signers choose their
+        // initials.
+        initials_rule: Some(InitialsRule::SignerV1),
         stamp: request.stamp.clone(),
     };
     tamper(&mut envelope);
@@ -1699,6 +1716,7 @@ fn sign_inner(
     };
 
     let mut field_texts: Vec<FieldText> = Vec::new();
+    let mut chosen_initials: Option<String> = None;
     let drawing = signer_drawing(request, env.schema_version)?;
     if kind == RecordKind::Signed {
         if let Some(drawing) = &drawing {
@@ -1822,7 +1840,9 @@ fn sign_inner(
         let fingerprint = signer_key.fingerprint();
         let code = fingerprint.get(..8).unwrap_or(&fingerprint).to_string();
         let primary = primary_signature_field(&env, &signer_id).map(|f| f.id.clone());
-        let letters = signer_initials(&env, &signer_id, &identity);
+        chosen_initials = chosen_signer_initials(&env, &signer_id, &identity, request)?;
+        let letters = signer_initials(&env, &signer_id, &identity, chosen_initials.as_deref())
+            .unwrap_or_default();
         for f in env.fields.iter_mut().filter(|f| {
             f.assigned_signer == signer_id
                 && matches!(f.field_type, FieldType::Signature | FieldType::Initials)
@@ -1890,6 +1910,8 @@ fn sign_inner(
             .filter(|_| kind == RecordKind::Signed)
             .filter(|_| primary_signature_field(&env, &signer_id).is_some())
             .filter(|_| records_drawing(env.schema_version)),
+        // The chosen initials, when they are stamped (signer-v1, a further initials field).
+        initials: chosen_initials,
     };
     record.signature = signer_key.sign(&record_signing_payload(&env.envelope_id, &record));
     env.signatures.push(record);
@@ -3161,6 +3183,11 @@ fn check_signer_revision(
             m::DRAWING_MISMATCH,
             check_recorded_drawing(&cur.env, r),
         ));
+        status.initials = r.initials.clone().unwrap_or_default();
+        problems.extend(coded(
+            m::STAMP_MISMATCH,
+            check_recorded_initials(&cur.env, r),
+        ));
         status.token_issued_at = issued_at_rfc3339(&r.id_token);
         if let Some(offset) = &r.utc_offset {
             status.utc_offset = offset.clone();
@@ -3307,9 +3334,11 @@ fn check_signer_revision(
                     }
                     // Stamps in the signer's other signature/initials fields must be exactly
                     // what the engine derives from the *verified* identity (and, for initials,
-                    // the slot's name under the prepared initials rule).
+                    // the prepared initials rule: the slot's name, or the letters the signer's
+                    // own record keeps).
                     let code = fp.get(..8).unwrap_or(&fp);
-                    let letters = signer_initials(e0, &r.signer_id, &identity);
+                    let letters =
+                        signer_initials(e0, &r.signer_id, &identity, r.initials.as_deref());
                     problems.extend(coded(
                         m::SIGNATURE_BOX_MISMATCH,
                         check_signature_box(&cur.env, r, &added, &identity, code),
@@ -3320,9 +3349,17 @@ fn check_signer_revision(
                             && matches!(f.field_type, FieldType::Signature | FieldType::Initials)
                     }) {
                         let expected = (Some(&f.id) != primary && r.kind == RecordKind::Signed)
-                            .then(|| {
-                                stamp_text(f.field_type, &display_name(&identity), &letters, code)
-                            });
+                            .then(|| match (f.field_type, &letters) {
+                                // signer-v1 with no recorded letters: no stamp can match.
+                                (FieldType::Initials, None) => None,
+                                (_, letters) => Some(stamp_text(
+                                    f.field_type,
+                                    &display_name(&identity),
+                                    letters.as_deref().unwrap_or_default(),
+                                    code,
+                                )),
+                            })
+                            .flatten();
                         if f.value != expected {
                             problems.push(Finding::new(
                                 m::STAMP_MISMATCH,
@@ -3856,10 +3893,82 @@ fn primary_signature_field<'a>(env: &'a Envelope, signer_id: &str) -> Option<&'a
 }
 
 /// The letters stamped in signer `signer_id`'s further initials fields: the envelope's initials
-/// rule ([`crate::initials`]) applied to the slot's name (a prepared term) and the verified email.
-fn signer_initials(env: &Envelope, signer_id: &str, identity: &VerifiedIdentity) -> String {
+/// rule ([`crate::initials`]) applied to the slot's name (a prepared term) and the verified email,
+/// or (`signer-v1`) the letters the signer's own record keeps, `chosen`. `None` under `signer-v1`
+/// when the record keeps none.
+fn signer_initials(
+    env: &Envelope,
+    signer_id: &str,
+    identity: &VerifiedIdentity,
+    chosen: Option<&str>,
+) -> Option<String> {
     let slot_name = env.signer(signer_id).map_or("", |s| s.name.as_str());
-    initials::stamp_initials(env.initials_rule, slot_name, &identity.email)
+    initials::stamp_initials(env.initials_rule, slot_name, &identity.email, chosen)
+}
+
+/// Whether signer `signer_id` has an initials field that gets a stamp: one that is not their
+/// primary (signature box) field.
+fn has_initials_stamp(env: &Envelope, signer_id: &str) -> bool {
+    let primary = primary_signature_field(env, signer_id).map(|f| &f.id);
+    env.fields.iter().any(|f| {
+        f.assigned_signer == signer_id
+            && f.field_type == FieldType::Initials
+            && Some(&f.id) != primary
+    })
+}
+
+/// The initials a signing signer's record keeps: under `signer-v1`, when they have an initials
+/// stamp, the letters they chose (checked) or else the letters of the slot's name; `None`
+/// otherwise (their letters are derived, or nothing shows them).
+fn chosen_signer_initials(
+    env: &Envelope,
+    signer_id: &str,
+    identity: &VerifiedIdentity,
+    request: &SignRequest,
+) -> Result<Option<String>> {
+    if env.initials_rule != Some(InitialsRule::SignerV1) || !has_initials_stamp(env, signer_id) {
+        return Ok(None);
+    }
+    let letters = match &request.initials {
+        Some(letters) => letters.clone(),
+        None => {
+            let slot_name = env.signer(signer_id).map_or("", |s| s.name.as_str());
+            initials::signer_v1_default(slot_name, &identity.email).ok_or_else(|| {
+                SignPdfError::Workflow(
+                    "the signer's name gives no initials the stamp can draw: send the initials \
+                     they choose (1 to 3 letters)"
+                        .into(),
+                )
+            })?
+        }
+    };
+    initials::check_signer_initials(&letters)
+        .map_err(|e| SignPdfError::Workflow(format!("the signer's initials: {e}")))?;
+    Ok(Some(letters))
+}
+
+/// A signature record's chosen initials must be where the envelope's rule puts them: under
+/// `signer-v1`, exactly on a signed record whose signer has an initials stamp, and 1 to 3
+/// initials letters; never under another rule.
+fn check_recorded_initials(env: &Envelope, rec: &SignatureRecord) -> Option<String> {
+    let wanted = env.initials_rule == Some(InitialsRule::SignerV1)
+        && rec.kind == RecordKind::Signed
+        && has_initials_stamp(env, &rec.signer_id);
+    match (&rec.initials, wanted) {
+        (None, false) => None,
+        (Some(_), false) => Some(
+            "the signature record keeps initials, which this envelope's rule, revision or \
+             fields do not take"
+                .into(),
+        ),
+        (None, true) => Some(
+            "the signature record keeps no initials, and the signer's initials fields need them"
+                .into(),
+        ),
+        (Some(letters), true) => initials::check_signer_initials(letters)
+            .err()
+            .map(|e| format!("the signature record's initials: {e}")),
+    }
 }
 
 /// The engine-generated stamp drawn in a signer's non-primary signature/initials fields: for an
@@ -4809,8 +4918,9 @@ fn check_recorded_drawing(env: &Envelope, rec: &SignatureRecord) -> Option<Strin
 }
 
 /// Deterministic byte string a [`SignatureRecord`]'s self-contained signature is computed over.
-/// It does not name the signer's drawing: the revision's PDF signature covers the whole record,
-/// and the drawing is decoration, not evidence.
+/// It does not name the signer's drawing or chosen initials: the revision's PDF signature covers
+/// the whole record, and a verifier trusts either only after checking that signature and the
+/// revision chain (a consumer that reads a record alone must not present them as signed).
 fn record_signing_payload(envelope_id: &str, r: &SignatureRecord) -> Vec<u8> {
     format!(
         "signpdf-pades-rec-v2|{}|{}|{}|{}|{}|{}|{}|{}",
@@ -5103,6 +5213,7 @@ mod tests {
             idp_audience: TEST_AUDIENCE.into(),
             utc_offset: None,
             drawing: None,
+            initials: None,
         };
         let env = Envelope {
             schema_version: SCHEMA_VERSION,
@@ -5120,7 +5231,7 @@ mod tests {
             source_len: 25,
             documents: Vec::new(),
             verify_at: None,
-            initials_rule: Some(InitialsRule::NameV1),
+            initials_rule: Some(InitialsRule::SignerV1),
             stamp: None,
             signers: vec![Signer {
                 id: "s1".into(),

@@ -82,6 +82,8 @@ impl TrustArgs {
     }
 }
 
+// Parsed once per run: the size of the largest command's arguments does not matter.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Cmd {
     /// Generate a self-signed identity (key pair) and write it to a JSON file.
@@ -180,6 +182,11 @@ enum Cmd {
         /// into their audit entry: {"version", "lang", "sha256", "ref_sha256"?, "at"}.
         #[arg(long, value_name = "FILE")]
         esign_consent: Option<PathBuf>,
+        /// The initials stamped in the signer's further initials fields, 1 to 3 letters, when the
+        /// envelope lets signers choose them (schema version 12, rule signer-v1). Default: the
+        /// letters of the signer's name as the sender typed it.
+        #[arg(long, value_name = "LETTERS")]
+        initials: Option<String>,
         /// Type a signature: this name, drawn in the signature box as the glyph outlines of the
         /// font --signature-font names (filled paths, not text; the PDF embeds no font). Needs an
         /// envelope of schema version 6 or later. Decoration: the box's caption names the
@@ -784,6 +791,7 @@ fn run(cli: Cli) -> Result<()> {
             tsa_url,
             utc_offset,
             esign_consent,
+            initials,
             type_signature,
             signature_font,
         } => {
@@ -825,6 +833,7 @@ fn run(cli: Cli) -> Result<()> {
                     tsa_url,
                     utc_offset_minutes,
                     esign_consent,
+                    initials,
                     typed_signature,
                 },
             )
@@ -1324,6 +1333,8 @@ struct SignChoices {
     tsa_url: Option<String>,
     utc_offset_minutes: Option<i32>,
     esign_consent: Option<EsignConsent>,
+    /// The initials the signer chose (signer-v1).
+    initials: Option<String>,
     /// The glyph outlines of a typed signature.
     typed_signature: Option<InkPaths>,
 }
@@ -1342,6 +1353,7 @@ fn cmd_sign(
         tsa_url,
         utc_offset_minutes,
         esign_consent,
+        initials,
         typed_signature,
     } = choices;
     let tsa_url = tsa_url.as_deref();
@@ -1387,6 +1399,7 @@ fn cmd_sign(
         allowed_issuers: token.allowed_issuers,
         utc_offset_minutes,
         esign_consent,
+        initials,
         typed_signature,
         ..Default::default()
     };
@@ -2656,6 +2669,9 @@ fn demo_documents(dir: &std::path::Path, tsa: &TestTsa, trust: &TrustStore) -> R
     let bob_dev = mint_dev_identity(&bob_key, &sha256_hex(&prepared), bob_email, false)?;
     let mut bob_req = dev_sign_request(bob_dev);
     bob_req.field_values = vec![("bob-ref".into(), "PO-2026-118".into())];
+    // Bob chooses three letters for his initials (signer-v1); Alice keeps the letters of her
+    // name, which the engine offers by default.
+    bob_req.initials = Some("BvB".into());
     let after_bob = sign_with(&prepared, &bob_key, &bob_req, Some(tsa))?;
     let alice_key = KeyPair::generate();
     let alice_dev = mint_dev_identity(&alice_key, &sha256_hex(&after_bob), alice_email, false)?;

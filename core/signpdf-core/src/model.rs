@@ -401,6 +401,13 @@ pub struct SignatureRecord {
     /// a signer who adopted the caption alone), and always before version 6.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawing: Option<SignatureDrawing>,
+    /// The initials the signer chose, from envelope schema version 12 (initials rule
+    /// `signer-v1`, [`crate::initials::check_signer_initials`]): 1 to 3 letters, stamped in each
+    /// of their further initials fields. Present exactly when the revision is signed and the
+    /// signer has such a field; their revision's signature covers it, and no other revision can
+    /// write it. Absent before version 12, whose rules derive the letters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub initials: Option<String>,
 }
 
 /// Actions recorded in the append-only audit log.
