@@ -175,10 +175,19 @@ headline `valid = integrity_ok && identities_trusted`.
      exact decimal arithmetic and rejects a difference (`formula_mismatch`), and redraws the
      value. Preparation lets a formula read only fields of its own signer or of a signer who
      signs before, so a later signer cannot change a total someone already signed.
-   - **initials stamps** (schema version 9) hold the letters the envelope's `initials_rule`
-     (`name-v1`, `spec/envelope-format.md` §4.6) derives from the slot's sealed `name` and the
-     verified email address; the verifier redraws each stamp with those letters, so a stamp with
-     other letters fails the byte-for-byte comparison below.
+   - **initials stamps** hold the letters of the envelope's `initials_rule`
+     (`spec/envelope-format.md` §4.6). In schema versions 9 to 11 (`name-v1`) they are derived
+     from the slot's sealed `name` and the verified email address. From version 12
+     (`signer-v1`) they are the letters the signer chose, kept in their own signature record
+     (`initials`, 1 to 3 letters the stamp font draws, checked against a closed list), which
+     only their revision writes and their signature covers: the verifier rejects a stamp that
+     differs from that record, a record whose letters break the rule, and a record that keeps
+     letters where nothing stamps them or none where a stamp needs them (`stamp_mismatch`). It
+     does not check the letters against the name or the identity, as it does not check a typed
+     signature; the identity is the verified account in the signature box. Each version names
+     exactly one rule, and the version and rule are prepared terms, so a signer cannot move a
+     document to the other rule. The verifier redraws each stamp with the letters, so a stamp
+     with other letters fails the byte-for-byte comparison below.
    - the signer's ID token verifies at the signing time, is bound to the record's key and
      digest, and satisfies the slot's identity policy.
 5. **What follows a signature without being one** is one document timestamp and, before it,
@@ -804,7 +813,8 @@ verifiable for as long as anyone keeps it. The engine's rules are in
 | 8 | from 7 November 2026 | experimental, verified and signed: version 7 with checks on text fields (`value_format`, `length`, `check_message`), a currency in number formats, and formula fields; its initials stamps are the letters of the verified email address |
 | 9 | from 8 November 2026 | experimental, verified and signed (documents on hosted services that ran it keep their yellow "SignPDF Document" stamp and verify): version 8 with the required `initials_rule` (`name-v1`): initials stamps are the letters of the slot's name, which the preparer signs, else of the verified email address (`spec/envelope-format.md` §4.6) |
 | 10 | from 14 November 2026 | experimental, verified and signed (documents on hosted services that ran it keep their framed `Signed by:` signature boxes and verify): version 9 with the optional `stamp`: the word and colour (`yellow` or `green`) of the document-ID stamp, chosen by the preparing host and part of the prepared terms; the verifier redraws the stamp from it (`spec/envelope-format.md` §4.7) |
-| 11 | from 14 November 2026 | experimental, written by prepare (`SCHEMA_VERSION` = 11): the JSON of version 10; the signature box shows the drawing (or the email) large with `Sig <code> · <time> · via <Provider>` and the email in one small row under it, and the document-ID stamp's box is measured from Helvetica's widths (`spec/envelope-format.md` §4.7, §4.8) |
+| 11 | from 14 November 2026 | experimental, verified and signed (documents on hosted services that ran it keep their initials from the slot's name, `name-v1`, and verify): the JSON of version 10; the signature box shows the drawing (or the email) large with `Sig <code> · <time> · via <Provider>` and the email in one small row under it, and the document-ID stamp's box is measured from Helvetica's widths (`spec/envelope-format.md` §4.7, §4.8) |
+| 12 | from 20 November 2026 | experimental, written by prepare (`SCHEMA_VERSION` = 12): version 11 whose `initials_rule` is `signer-v1`: each signer chooses their initials (1 to 3 letters), their signature record keeps them (`initials`) and the verifier checks every initials stamp against that record (`spec/envelope-format.md` §4.6) |
 | newer | a later build | refused with "unsupported version" (see below) |
 
 **Experimental until the first hosted release.** No document written before that release
@@ -850,7 +860,9 @@ These hold already, for every version:
 build of each supported version, each with that build's own verification report. Their reports
 from before assurance levels give `assurance` (`consumer`, `enterprise`); the corpus check reads
 it as the level today's verifier computes for the same identity (the test issuer is an account
-provider, so `consumer` is L2 and `enterprise` L3). The v11 set, 2026-11-14-e2c3186, has the
+provider, so `consumer` is L2 and `enterprise` L3). The v12 set has the documents of the v11 set
+with each signer's initials in their record: Bob chose `BvB` for the envelope of several
+documents and Alice kept the starting letters of her name (`AE`). The v11 set, 2026-11-14-e2c3186, has the
 documents of the v10 set drawn with version 11's signature box and measured stamp. The v10 set,
 2026-11-14-7256808, has the
 documents of the v9 set with a stamp word and colour the preparer chose (`Example` on green),

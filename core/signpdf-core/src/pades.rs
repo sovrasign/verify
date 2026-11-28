@@ -5161,6 +5161,37 @@ mod tests {
     }
 
     #[test]
+    fn three_initials_fit_the_initials_box() {
+        // A signer's chosen initials (signer-v1) are up to three letters. In the default
+        // initials box (60 x 32 pt) the widest three keep the full 14 pt; in the smallest one
+        // (36 x 20 pt) they shrink to fit its width instead of being clipped.
+        let stamp = |text: &str, w: f32, h: f32| {
+            field_appearance(&FieldText {
+                name: "signpdf-field-ini".into(),
+                page_index: 0,
+                rect: [0.0, 0.0, w, h],
+                text: text.into(),
+                mark: FieldMark::None,
+                multiline: false,
+            })
+        };
+        for letters in ["WWW", "ŒŒŒ", "MMM", "JvB", "A"] {
+            let d = stamp(letters, 60.0, 32.0);
+            assert_eq!(d.size, 14.0, "{letters}");
+            let d = stamp(letters, 36.0, 20.0);
+            assert!(d.size >= 10.0, "{letters}: {}", d.size);
+            assert!(
+                text_width(letters, d.size) <= 36.0 - 2.0 - FIELD_PAD + 1e-3,
+                "{letters} at {} pt",
+                d.size
+            );
+            assert!(d
+                .content
+                .contains(&format!("({})", winansi_literal(letters))));
+        }
+    }
+
+    #[test]
     fn wrapping_keeps_line_breaks_and_splits_only_oversized_words() {
         // "aaa bbb" is 34.5 pt wide at 10 pt.
         assert_eq!(wrap_lines("aaa bbb ccc", 10.0, 40.0), ["aaa bbb", "ccc"]);

@@ -91,6 +91,12 @@ criteria = "safe-to-deploy"
 delta = "1.1.5 -> 1.1.9"
 notes = "The engine uses the miniz_oxide (pure Rust) backend. The changed unsafe code is in the C zlib backend (set_level/set_dictionary), which the engine does not build; the zlib-rs paths move to its safe API. Other changes: write/read wrapper fixes and docs. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
 
+[[audits.form_urlencoded]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.2 -> 1.2.3"
+notes = "No new unsafe (the existing blocks are unchanged), no build script or I/O. Serializer::for_suffix clamps an out-of-range start position instead of panicking; percent-encoding floor raised to 2.3.2. Reviewed with Claude Code (AI-assisted), 2026-11-23: every unsafe block, build-time code and I/O, and panics reachable from untrusted input."
+
 [[audits.group]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -186,6 +192,12 @@ who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.8.1"
 notes = "forbid(unsafe_code). SubjectPublicKeyInfo and AlgorithmIdentifier types over der; decoding returns errors, no panics on input; std::fs only in tests. No build script or I/O. Reviewed with Claude Code (AI-assisted), 2026-11-18: every unsafe block, build-time code and I/O, and panics reachable from untrusted input; not a review of cryptographic correctness, which the engine's own test vectors cover."
+
+[[audits.url]]
+who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "2.5.8 -> 2.5.9"
+notes = "No new unsafe (the one existing block is unchanged), no build script, no new I/O. Fixes RUSTSEC-2026-0592: Url::origin() of a blob: URL takes the inner URL's origin only for http, https and file, so nested blob: URLs no longer recurse. Also: path and query percent-encode sets aligned with the URL Standard, a backslash ends the port only for special schemes, and last_slash_can_be_removed searches the path only (string slices at ASCII slash boundaries; no longer quadratic on leading double-dot segments). The rest is WPT test data and doc comments. Reviewed with Claude Code (AI-assisted), 2026-11-23: every unsafe block, build-time code and I/O, and panics reachable from untrusted input."
 
 [[audits.weezl]]
 who = "Sovrasign <23560268+ffrachon@users.noreply.github.com>"

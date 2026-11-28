@@ -59,6 +59,11 @@ corpus/
                           shows the drawing (or the email) large with the details in one small
                           row under it, and the document-ID stamp's box is measured from
                           Helvetica's widths
+  v12/
+    2026-11-20-26e93c3/   initials the signers choose (initials_rule signer-v1): the v11
+                          documents with each signer's initials in their signature record; in
+                          the envelope of several documents Bob chose BvB and Alice kept the
+                          starting letters of her name, AE
   newer/
     schema-v1000.pdf      a sound document whose envelope claims version 1000
 ```
@@ -116,7 +121,9 @@ it), and `SOURCE.txt` with the commit, toolchain and commands.
 - and, from v8, text fields with a sealed format, length rule and owner message, an identifier
   drawn masked and a number in a currency (`tests/r17_text_formats.rs`);
 - and, from v9, an envelope that names its initials rule (`name-v1`) with initials stamps of the
-  slot names (`AE`, `BB`) where the addresses would give other letters (`tests/initials_name.rs`).
+  slot names (`AE`, `BB`) where the addresses would give other letters (`tests/initials_name.rs`);
+- and, from v12, initials the signers chose (`signer-v1`): each stamp is the letters its signer's
+  record keeps, one chosen (`BvB`) and one the starting value (`AE`) (`tests/initials_signer.rs`).
 
 `newer/schema-v1000.pdf` is used by the FFI tests, the WASM tests and `web/verifier/versions.mjs`
 to check that a document from a newer build is refused with the "unsupported version" error

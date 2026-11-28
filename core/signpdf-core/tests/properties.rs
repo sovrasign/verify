@@ -292,6 +292,7 @@ fn signature_record() -> impl Strategy<Value = SignatureRecord> {
             text(),
             opt("[+-][01][0-9]:[0-5][0-9]"),
             opt(drawing()),
+            opt(text()),
         ),
     )
         .prop_map(
@@ -318,6 +319,7 @@ fn signature_record() -> impl Strategy<Value = SignatureRecord> {
                     idp_audience,
                     utc_offset,
                     drawing,
+                    initials,
                 ),
             )| SignatureRecord {
                 kind,
@@ -339,6 +341,7 @@ fn signature_record() -> impl Strategy<Value = SignatureRecord> {
                 idp_audience,
                 utc_offset,
                 drawing,
+                initials,
             },
         )
 }
@@ -454,7 +457,10 @@ fn envelope() -> impl Strategy<Value = Envelope> {
             vec(audit_entry(), 0..4),
             opt(text()),
             opt(text()),
-            opt(Just(InitialsRule::NameV1)),
+            opt(prop_oneof![
+                Just(InitialsRule::NameV1),
+                Just(InitialsRule::SignerV1)
+            ]),
             opt((
                 text(),
                 prop_oneof![Just(StampColor::Yellow), Just(StampColor::Green)],
@@ -542,8 +548,8 @@ proptest! {
     fn every_schema_version_round_trips_or_refuses(env in envelope(), to in 3u32..=signpdf_core::SCHEMA_VERSION) {
         let mut env = Envelope { schema_version: to, ..env };
         if to == signpdf_core::SCHEMA_VERSION {
-            // The current version requires an initials rule.
-            env.initials_rule = Some(InitialsRule::NameV1);
+            // The current version requires its initials rule.
+            env.initials_rule = Some(InitialsRule::SignerV1);
         }
         match encode_envelope(&env) {
             Ok(bytes) => {
@@ -572,7 +578,7 @@ proptest! {
     ) {
         let env = Envelope {
             schema_version: signpdf_core::SCHEMA_VERSION,
-            initials_rule: Some(InitialsRule::NameV1),
+            initials_rule: Some(InitialsRule::SignerV1),
             ..env
         };
         let mut bytes = encode_envelope(&env).unwrap();

@@ -1,9 +1,9 @@
 # SignPDF envelope format
 
 **Status:** experimental until the first hosted release (§13.1); open items in §14.
-**Envelope schema version:** 11 (the newest this specification describes).
+**Envelope schema version:** 12 (the newest this specification describes).
 **Oldest supported version:** 3.
-**Specification revision:** 11.0 (2026-11-14).
+**Specification revision:** 12.0 (2026-11-20).
 **Licence:** this text is licensed under CC BY 4.0 (`LICENSES/CC-BY-4.0.txt`); the test vectors
 it refers to are CC0 (`LICENSES/CC0-1.0.txt`).
 **Copyright:** 2026 Sovrasign LLC and contributors.
@@ -163,9 +163,11 @@ timestamp; their record's `signed_prefix_len` then includes it.
 
 ## 4. The envelope
 
-### 4.1 Members (schema version 11)
+### 4.1 Members (schema version 12)
 
-Version 11 has the members of version 10; it changes only what the engine draws (§4.8).
+Version 12 has the members of version 11, with the initials rule `signer-v1` and the signature
+record's `initials` (§4.6, §6.1). Version 11 has the members of version 10; it changes only what
+the engine draws (§4.8).
 
 | Member | Type | Prepared term | Meaning |
 | --- | --- | --- | --- |
@@ -188,7 +190,7 @@ Version 11 has the members of version 10; it changes only what the engine draws 
 | `audit_log` | array of entry | no (append-only) | §6.2 |
 | `service_link` | string | **no** | OPTIONAL `https` URL that opens the envelope in the service that sent it (§7.5) |
 | `verify_at` | string | yes | from version 7, OPTIONAL: a short verifier address (no scheme, 40 characters at most) the document-ID stamp draws as "Verify at …" |
-| `initials_rule` | string | yes | from version 9, REQUIRED: the rule that derives the letters stamped in a signer's further initials fields (§4.6); `name-v1` is the only value. Absent before version 9, where the email rule applies |
+| `initials_rule` | string | yes | from version 9, REQUIRED: the rule that gives the letters stamped in a signer's further initials fields (§4.6): `name-v1` in versions 9 to 11, `signer-v1` from version 12, and no other value in either. Absent before version 9, where the email rule applies |
 | `stamp` | object | yes | from version 10, OPTIONAL: the document-ID stamp's `word` (1 to 24 ASCII letters, digits and single spaces, starting and ending with a letter or digit) and `color` (`yellow` or `green`), chosen by the preparing host (§4.7). Absent (always, before version 10): the word `SignPDF Document` on yellow |
 
 A writer MUST NOT add members this table does not list for its version. A reader MUST decode a
@@ -208,7 +210,7 @@ unchanged (`terms_changed`).
 | Member | Meaning |
 | --- | --- |
 | `id` | unique among slots, non-empty |
-| `name`, `handle`, `role` | display text from the preparer (`handle` is usually an email); never evidence of who signed. From version 9, `name` is also what the initials stamps are derived from (§4.6) |
+| `name`, `handle`, `role` | display text from the preparer (`handle` is usually an email); never evidence of who signed. In versions 9 to 11, `name` is also what the initials stamps are derived from; from version 12 it only gives the letters a host offers the signer to start from (§4.6) |
 | `order` | 1-based; with `sequential`, every pending slot sharing the lowest `order` may act |
 | `status` | `pending`, `signed` or `declined` |
 | `identity_policy` | §5.3 |
@@ -292,12 +294,44 @@ is not valid: `preparer_revision_invalid`).
 
 ### 4.6 Initials (version 9 and later: `initials_rule`)
 
-The letters in a signer's further `initials` fields are derived from the slot's `name` (a
-prepared term, so the preparer's signature covers it and a signer cannot change it) and the
-email address the signer's identity provider verified (§5.2). The ID token's own `name` claim
-is a profile name the account holder types and is never used. The envelope names the rule:
+The envelope names the rule that gives the letters in a signer's further `initials` fields. Each
+version has exactly one: `name-v1` in versions 9 to 11, `signer-v1` from version 12. A document
+naming another version's rule is not of its version, and since `schema_version` and
+`initials_rule` are prepared terms (§4.2), no signer can move a document from one rule to the
+other (`terms_changed`).
 
-**`name-v1`** (the only rule of version 9):
+**`signer-v1`** (version 12): **the signer chooses** their initials.
+
+1. When a signer signs and has at least one further `initials` field (one that is not their
+   primary field, §4.4), their signature record keeps the letters they chose in `initials`
+   (§6.1). Their revision's signature covers the record; no other revision may write or change
+   it (§7.2). A record keeps no `initials` when the revision declines or the signer has no such
+   field.
+2. The letters are 1 to 3 characters (Unicode scalar values), each one of: `A` to `Z`, `a` to
+   `z`, U+00C0 to U+00FF except U+00D7 `×` and U+00F7 `÷`, and U+0160 `Š`, U+0161 `š`,
+   U+0152 `Œ`, U+0153 `œ`, U+017D `Ž`, U+017E `ž`, U+0178 `Ÿ`. These are the letters the stamp
+   font draws (WinAnsiEncoding) except `ª`, `º`, `µ`, `ƒ` and `ˆ`. Nothing else is allowed (no
+   space, digit, punctuation, combining mark, format or control character), and no
+   normalization is applied: a writer composes what the signer typed (NFC) before it checks it,
+   and refuses letters outside this set rather than change them. Capitals and small letters
+   are kept as written (`JvB`).
+3. Each of the signer's further `initials` fields holds exactly the record's `initials`. A
+   verifier MUST reject (`stamp_mismatch`) a stamp that differs from them, a record whose
+   `initials` break rule 2, a record without `initials` where rule 1 needs them, and a record
+   with `initials` where rule 1 gives none.
+4. A host SHOULD offer the signer a starting value: the `name-v1` letters of the slot's `name`
+   (below), keeping only the characters rule 2 allows, at most 3. When nothing is left, the
+   signer types their own. The starting value is a convenience and never decides validity.
+
+So the verifier guarantees that the letters in a signer's initials boxes are the ones that
+signer's own signature covers; it does not check them against the slot's name or the verified
+identity, just as a typed signature is not checked against a name. The signer's identity is the
+verified account (§5), shown in their signature box.
+
+**`name-v1`** (versions 9 to 11): the letters are derived from the slot's `name` (a prepared
+term, so the preparer's signature covers it and a signer cannot change it) and the email address
+the signer's identity provider verified (§5.2). The ID token's own `name` claim is a profile name
+the account holder types and is never used.
 
 1. Cut the slot's `name` into words at white space (Unicode `White_Space`). Leave out every word
    holding `@` and every word without a letter (Unicode `Alphabetic`).
@@ -430,6 +464,7 @@ Each signer revision appends one record:
 | `id_token`, `idp_jwk`, `idp_issuer`, `idp_subject`, `idp_email`, `idp_audience` | the signer's token, the JWK that signed it, and mirrors of `iss`, `sub`, the verified `email` and the `aud` accepted |
 | `utc_offset` | OPTIONAL `±HH:MM` between `-12:00` and `+14:00`: the signer's offset as the host reported it |
 | `drawing` | from version 6, OPTIONAL: `{"kind": "drawn", "strokes": …}` or `{"kind": "typed", "paths": …}`, what the box shows beside the caption (§7.3) |
+| `initials` | from version 12: the initials the signer chose (`signer-v1`, §4.6), present exactly when the revision signs and the signer has a further `initials` field; absent before version 12 |
 
 The record payload, signed by the ephemeral key, is the UTF-8 string:
 
@@ -701,6 +736,13 @@ titles and suffixes, particles, hyphens, accents inside and outside WinAnsiEncod
 scripts, no name). A conforming writer, verifier and any page that shows the letters before
 signing MUST give the same letters for every case.
 
+`spec/vectors/initials-signer-v1.json`: for the `signer-v1` rule (§4.6), letters a writer
+accepts and a verifier expects (`valid`), letters both refuse (`invalid`: too many, spaces,
+digits, punctuation, symbols WinAnsiEncoding draws, letters it lacks, look-alikes of other
+scripts, a decomposed accent, invisible and control characters), and the starting value a host
+offers for a slot name and a verified address (`prefill`, `null` when there is none). A
+conforming writer, verifier and signing page MUST agree on every case.
+
 ## 13. Versioning
 
 ### 13.1 Rules
@@ -708,7 +750,7 @@ signing MUST give the same letters for every case.
 The rules are those of `docs/SECURITY_MODEL.md` §8. In short: an envelope keeps its version for
 life; a build never signs a newer version; every **stable** version from the oldest supported
 to the newest verifies forever, each under its own rules; any change to a stable version's shape
-or to what a revision may contain is a new version. Versions up to and including 11 are
+or to what a revision may contain is a new version. Versions up to and including 12 are
 **experimental** until the first hosted release fixes its version as the first stable one; an
 experimental version may change in place and its corpus fixtures are then replaced.
 
@@ -723,6 +765,7 @@ experimental version may change in place and its corpus fixtures are then replac
 | 9 | `initials_rule` (`name-v1`): initials stamps from the slot's name instead of the verified email address |
 | 10 | `stamp`: the word and colour of the document-ID stamp, chosen by the preparing host |
 | 11 | no new member: the signature box shows the drawing large with the details under it (§4.8), and the document-ID stamp's box is measured from Helvetica's widths (§4.7) |
+| 12 | `initials_rule` `signer-v1` and the records' `initials`: each signer chooses the letters of their initials stamps, and their own signature covers them (§4.6) |
 
 ### 13.2 Unknown versions
 

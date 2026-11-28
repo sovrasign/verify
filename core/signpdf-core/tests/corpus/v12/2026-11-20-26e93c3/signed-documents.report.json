@@ -1,0 +1,345 @@
+{
+  "valid": true,
+  "integrity_ok": true,
+  "identities_trusted": true,
+  "original_len": 118839,
+  "document_sha256": "0db5d489755b3f02df2cc813701ba60aca8408d720c365b90f0937b1db21523b",
+  "complete": true,
+  "declined": false,
+  "audit_ok": true,
+  "order_ok": true,
+  "preparer": {
+    "index": 0,
+    "kind": "prepared",
+    "signer_id": "",
+    "actor_fingerprint": "7a3b7bf5149978e9227417caa5702a94cc2ed75728b228bd2f69e72fb88f9216",
+    "signed_at": "2026-11-20T09:37:59.1053838Z",
+    "time_source": "device",
+    "token_issued_at": "2026-11-20T09:37:54Z",
+    "valid": true,
+    "detail": "preparer signature valid; identity verified as alice@example.com via https://issuer.test",
+    "idp_email": "alice@example.com",
+    "idp_issuer": "https://issuer.test",
+    "level": "L2",
+    "basis": [
+      {
+        "method": "account",
+        "issuer": "https://issuer.test"
+      }
+    ],
+    "identity_trust": "insecure-dev",
+    "signature_code": "7a3b7bf5"
+  },
+  "signatures": [
+    {
+      "index": 1,
+      "kind": "signed",
+      "signer_id": "s2",
+      "actor_fingerprint": "0f27b5ace85856a330d49cce5f36e4ca38416a4bfa42daa806c47e404704d5fd",
+      "signed_at": "2026-11-20T09:37:59.1116331Z",
+      "time_source": "device",
+      "token_issued_at": "2026-11-20T09:37:54Z",
+      "valid": true,
+      "detail": "PAdES signature valid; identity verified as bob@example.com via https://issuer.test",
+      "timestamp": {
+        "kind": "signature",
+        "time": "2026-11-20T09:37:59Z",
+        "verified": true,
+        "signature_valid": true,
+        "trusted": false,
+        "tsa_name": "SignPDF Demo TSA",
+        "serial": "2a",
+        "detail": "TSA certificate does not chain to a trusted timestamp anchor"
+      },
+      "idp_email": "bob@example.com",
+      "idp_issuer": "https://issuer.test",
+      "level": "L2",
+      "basis": [
+        {
+          "method": "account",
+          "issuer": "https://issuer.test"
+        }
+      ],
+      "identity_trust": "insecure-dev",
+      "signature_code": "0f27b5ac",
+      "initials": "BvB"
+    },
+    {
+      "index": 2,
+      "kind": "signed",
+      "signer_id": "s1",
+      "actor_fingerprint": "cd0473ed33be74751c204f6348b795c407f4fc30831c5998a917c3c124d20695",
+      "signed_at": "2026-11-20T09:37:59.1343456Z",
+      "time_source": "device",
+      "token_issued_at": "2026-11-20T09:37:54Z",
+      "valid": true,
+      "detail": "PAdES signature valid; identity verified as alice@example.com via https://issuer.test",
+      "timestamp": {
+        "kind": "signature",
+        "time": "2026-11-20T09:37:59Z",
+        "verified": true,
+        "signature_valid": true,
+        "trusted": false,
+        "tsa_name": "SignPDF Demo TSA",
+        "serial": "2a",
+        "detail": "TSA certificate does not chain to a trusted timestamp anchor"
+      },
+      "idp_email": "alice@example.com",
+      "idp_issuer": "https://issuer.test",
+      "level": "L2",
+      "basis": [
+        {
+          "method": "account",
+          "issuer": "https://issuer.test"
+        }
+      ],
+      "identity_trust": "insecure-dev",
+      "signature_code": "cd0473ed",
+      "initials": "AE"
+    }
+  ],
+  "messages": [],
+  "warnings": [
+    "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+  ],
+  "findings": [
+    {
+      "code": "insecure_dev_trust",
+      "severity": "warning",
+      "text": "INSECURE: this verification trusts the bundled dev identity provider; never use this setting for real documents"
+    }
+  ],
+  "service_link": "https://sign.example.com/envelopes/demo-nda",
+  "pades_level": "B-B",
+  "algorithm_policy": {
+    "version": 1,
+    "source": "builtin"
+  },
+  "envelope": {
+    "schema_version": 12,
+    "envelope_id": "7ea076b7b6c07aec4e83203de2ac93f5",
+    "title": "Services agreement with schedules",
+    "created_by": "alice@example.com",
+    "created_at": "2026-11-20T09:37:59.1053838Z",
+    "created_by_pubkey": "BOIPBpr9s8+6O6OwXEeQTD/gVHd50vd163Vz8L1pFXiNCmkJl47XASsO4pSxI9QxW2RqgJZ8Yn51f+T6ZqNukkc=",
+    "created_by_id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5NTE3MTA3OSwiaWF0IjoxNzk1MTY3NDc0LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiI2OWI5MzlkMjUzZjc3ZDdlOTM0ZjRlNzI3YjNjMGFlOTMzYzQwN2VlZmFkOWNkM2MxOTNjOTdiZWVhNTBjOGM5Iiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.oaMdEymBgM12NZ7mm1Weknl-R9fdgm7-4kGqDRe16c-59GpxTmHtCydZ856S-p7IKYF1pRsYH2AdvcyLreHBmg",
+    "created_by_idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"bM--6dOvVbIH99aRBRqt31OJ4z6gyzT0Hx7uO12EJvE\",\"y\":\"9xQHwaHAfv_uCa_mmjjnMNMG6Gxhfgw8Ew0ar_4E4W4\"}",
+    "created_by_issuer": "https://issuer.test",
+    "created_by_email": "alice@example.com",
+    "created_by_audience": "signpdf-cli-dev",
+    "source_digest": "6ed9875d102979df363b25684325d4abc8af91638d5fbe4f68620b50a3f93127",
+    "source_len": 2612,
+    "documents": [
+      {
+        "name": "Master services agreement.pdf",
+        "first_page": 0,
+        "page_count": 2,
+        "source_digest": "4c9eac6c198bfd0e184beda0431aac341772933e14fc34fe7b8bdf62751803bb"
+      },
+      {
+        "name": "Schedule A - fees.pdf",
+        "first_page": 2,
+        "page_count": 1,
+        "source_digest": "91a6d8928cb24ac6a8337cadea667de4c9a76aa1ea0ed3e005d337cbb830c59c"
+      },
+      {
+        "name": "Schedule B - data processing.pdf",
+        "first_page": 3,
+        "page_count": 2,
+        "source_digest": "d1a6539ecd1fccaed0caeb147d1f78849719c91d27baf00104b7b8f564bb1605"
+      }
+    ],
+    "signers": [
+      {
+        "id": "s1",
+        "name": "Alice Example",
+        "handle": "alice@example.com",
+        "role": "Provider",
+        "order": 1,
+        "status": "signed",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "alice@example.com",
+          "min_level": "L1"
+        },
+        "public_key": "BFvI5fckaejmEBe00dyxJ44ZX+iXtsFUU2PoAPPXZeEfU46LL7E6JAaVVk73osIko7mbx7jk4wcmFKZKYRpltsg=",
+        "fingerprint": "cd0473ed33be74751c204f6348b795c407f4fc30831c5998a917c3c124d20695"
+      },
+      {
+        "id": "s2",
+        "name": "Bob Builder",
+        "handle": "bob@example.com",
+        "role": "Customer",
+        "order": 1,
+        "status": "signed",
+        "identity_policy": {
+          "allowed_issuers": [
+            "https://issuer.test"
+          ],
+          "required_email": "bob@example.com",
+          "min_level": "L1"
+        },
+        "public_key": "BFrMcXO7fxPQcEryncMfO5vpebS3fpQY/LXjevJUmBy3s/B089xsdAYewhqy8oxnp0rbFQgGona6uJYlrmciDcU=",
+        "fingerprint": "0f27b5ace85856a330d49cce5f36e4ca38416a4bfa42daa806c47e404704d5fd"
+      }
+    ],
+    "fields": [
+      {
+        "id": "alice-sign",
+        "field_type": "signature",
+        "page": 1,
+        "rect": {
+          "x": 72.0,
+          "y": 120.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true
+      },
+      {
+        "id": "bob-sign",
+        "field_type": "signature",
+        "page": 1,
+        "rect": {
+          "x": 72.0,
+          "y": 200.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true
+      },
+      {
+        "id": "alice-initials",
+        "field_type": "initials",
+        "page": 2,
+        "rect": {
+          "x": 72.0,
+          "y": 300.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s1",
+        "required": true,
+        "value": "AE"
+      },
+      {
+        "id": "bob-initials",
+        "field_type": "initials",
+        "page": 2,
+        "rect": {
+          "x": 72.0,
+          "y": 360.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "value": "BvB"
+      },
+      {
+        "id": "bob-ref",
+        "field_type": "text",
+        "page": 4,
+        "rect": {
+          "x": 72.0,
+          "y": 420.0,
+          "w": 220.0,
+          "h": 40.0
+        },
+        "assigned_signer": "s2",
+        "required": true,
+        "value": "PO-2026-118",
+        "label": "Customer reference"
+      }
+    ],
+    "policy": {
+      "signing_order": "parallel",
+      "allowed_signature_types": [
+        "PAdES"
+      ],
+      "signature_timestamps": "required"
+    },
+    "signatures": [
+      {
+        "kind": "signed",
+        "signer_id": "s2",
+        "fingerprint": "0f27b5ace85856a330d49cce5f36e4ca38416a4bfa42daa806c47e404704d5fd",
+        "public_key": "BFrMcXO7fxPQcEryncMfO5vpebS3fpQY/LXjevJUmBy3s/B089xsdAYewhqy8oxnp0rbFQgGona6uJYlrmciDcU=",
+        "algorithm": "ECDSA_P256_SHA256",
+        "signed_at": "2026-11-20T09:37:59.1116331Z",
+        "doc_digest": "bda12c8e3ee66909819b58d29c8256a5883426f269fd971aa3e303963d8bd43a",
+        "signed_prefix_len": 8942,
+        "signature": "MEUCIQCgSJNJf9KtVvIo2fTX93971UsPJNVae9F2pQErw5iTBwIgcMzvHFqNTTbtzTWZapOTzB1zfZDN2E/xS1fonHHyuQo=",
+        "revision": 0,
+        "id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImJvYkBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3OTUxNzEwNzksImlhdCI6MTc5NTE2NzQ3NCwiaXNzIjoiaHR0cHM6Ly9pc3N1ZXIudGVzdCIsIm5hbWUiOiJib2JAZXhhbXBsZS5jb20iLCJub25jZSI6ImZjYmY1MzM2YzhmMGFhZGNjMzAxYTNjZGU2Y2NkMDRjMjE5NTY4OGUwM2UyYmNkZDM0OTYyNDQ5YTgwYzczYmEiLCJzdWIiOiJkZXZ8Ym9iQGV4YW1wbGUuY29tIn0.uu0-WWLyNKhPSABaCJ6CYYLf36Uz37Qy1DyM_mlBygqnJrmvYzT0qeCc0sGR0j0l1cpHXWETznabiaN4AsEOWg",
+        "idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"jvPq2c0D9UVXs0Asc7MNT8_FJz6Eeyouvh0EOJIf9Pw\",\"y\":\"0HkoIqvDXPvdgcNrNq69fsnh2-LrNHYjnTBMUgakKBM\"}",
+        "idp_issuer": "https://issuer.test",
+        "idp_subject": "dev|bob@example.com",
+        "idp_email": "bob@example.com",
+        "idp_audience": "signpdf-cli-dev",
+        "initials": "BvB"
+      },
+      {
+        "kind": "signed",
+        "signer_id": "s1",
+        "fingerprint": "cd0473ed33be74751c204f6348b795c407f4fc30831c5998a917c3c124d20695",
+        "public_key": "BFvI5fckaejmEBe00dyxJ44ZX+iXtsFUU2PoAPPXZeEfU46LL7E6JAaVVk73osIko7mbx7jk4wcmFKZKYRpltsg=",
+        "algorithm": "ECDSA_P256_SHA256",
+        "signed_at": "2026-11-20T09:37:59.1343456Z",
+        "doc_digest": "305385d05774092684bd5f7220e382c7ffcf48a81446ea9c285369b51b87ceed",
+        "signed_prefix_len": 63869,
+        "signature": "MEUCIQDPr22zAkMjO0YYYRnz2UQfywCtyirssxbaKSj7tehcJQIgSCAQyF885D4Q7MYH/lWTkJOUpYFkN1nh7qlVzSifoHU=",
+        "revision": 1,
+        "id_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImVzLXRlc3QtMSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzaWducGRmLWNsaS1kZXYiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc5NTE3MTA3OSwiaWF0IjoxNzk1MTY3NDc0LCJpc3MiOiJodHRwczovL2lzc3Vlci50ZXN0IiwibmFtZSI6ImFsaWNlQGV4YW1wbGUuY29tIiwibm9uY2UiOiJmNWJjOGJhYzkyYmM2YWFiYWI2YjZkZTk2MDcyMzg0YjUzZWQyN2MzMDI0MWM5YWU3YjNhYjMyZWUxYjM2N2UwIiwic3ViIjoiZGV2fGFsaWNlQGV4YW1wbGUuY29tIn0.ibYfUQkwclaE5iFrgT2K69TamH84A1-VCX1_I2-sE58NZRm8Y50ecStkFu1ptTzrQ3YDI92p_xOS_5Xg78nM4g",
+        "idp_jwk": "{\"kty\":\"EC\",\"kid\":\"es-test-1\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"0Mpg6XyPSxhQfRkEI9_uJngIFovgj25qPLpH9o69OVM\",\"y\":\"eCaxAlKpNtk2cYjf5zQ-eY7lr-dFDELEGHlcy3BCPho\"}",
+        "idp_issuer": "https://issuer.test",
+        "idp_subject": "dev|alice@example.com",
+        "idp_email": "alice@example.com",
+        "idp_audience": "signpdf-cli-dev",
+        "initials": "AE"
+      }
+    ],
+    "audit_log": [
+      {
+        "seq": 0,
+        "action": "prepared",
+        "actor_fingerprint": "7a3b7bf5149978e9227417caa5702a94cc2ed75728b228bd2f69e72fb88f9216",
+        "actor_name": "alice@example.com",
+        "at": "2026-11-20T09:37:59.1053838Z",
+        "details": "prepared 'Services agreement with schedules' (3 documents) for 2 signer(s); preparer verified as alice@example.com via https://issuer.test",
+        "prev_hash": "GENESIS",
+        "entry_hash": "f3b25f4bb63f5fb551fc904b8ebc2ab25b5a9c152e64c302aebc16f8ccbad2d4",
+        "signature": "MEUCIC02A69JsDzZXj8wkTDka7NTzL73XRxy8WOVaH17+/LFAiEAiXOwP7ShjLQBgytdJ/8fq3zM6iENa4ONj14GMF3sJ7Q="
+      },
+      {
+        "seq": 1,
+        "action": "signed",
+        "actor_fingerprint": "0f27b5ace85856a330d49cce5f36e4ca38416a4bfa42daa806c47e404704d5fd",
+        "actor_name": "bob@example.com",
+        "at": "2026-11-20T09:37:59.1116331Z",
+        "details": "bob@example.com signed (revision 0); verified as bob@example.com via https://issuer.test",
+        "prev_hash": "f3b25f4bb63f5fb551fc904b8ebc2ab25b5a9c152e64c302aebc16f8ccbad2d4",
+        "entry_hash": "2ee3ece7674c7e0fe356d06dab46ba0741c16e271b095feaec5ef1e872252d0e",
+        "signature": "MEUCIDKulNHbbFU918DyFc8vXJfl+GbXMfa+fLLlJueCIDw0AiEA6KQtOVxQ2XzkJ3ZQQWslZIxUVM/1P8ljQT2t5quGLmU="
+      },
+      {
+        "seq": 2,
+        "action": "signed",
+        "actor_fingerprint": "cd0473ed33be74751c204f6348b795c407f4fc30831c5998a917c3c124d20695",
+        "actor_name": "alice@example.com",
+        "at": "2026-11-20T09:37:59.1343456Z",
+        "details": "alice@example.com signed (revision 1); verified as alice@example.com via https://issuer.test",
+        "prev_hash": "2ee3ece7674c7e0fe356d06dab46ba0741c16e271b095feaec5ef1e872252d0e",
+        "entry_hash": "f400b84d2a1f6f6b934fb811f6d8eeb85ad0156b9cb2949380240ad53e094987",
+        "signature": "MEQCIAfO/EK9zKC9VFGOWeK6BeXpMlTrizu5QeweHEatuoz+AiA6LYRHMnG9hDL8yJGw2fYqfrPl0J9zO9lRvfjwhEs4IQ=="
+      }
+    ],
+    "service_link": "https://sign.example.com/envelopes/demo-nda",
+    "verify_at": "verify.example.com",
+    "initials_rule": "signer-v1"
+  }
+}

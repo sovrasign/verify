@@ -1,14 +1,19 @@
-//! The letters the engine stamps in a signer's further initials fields, and the rule that derives
-//! them, which the envelope names so that a verifier can derive them again.
+//! The letters the engine stamps in a signer's further initials fields, and the rule that gives
+//! them, which the envelope names so that a verifier can check them again.
 //!
 //! A signer's *primary* signature field (their first signature field, else their first initials
 //! field) carries their signature box. Every other initials field of theirs gets an engine stamp:
-//! letters derived only from data the verifier has, so a signer cannot write other text there
-//! and the verifier rejects a stamp that differs (`stamp_mismatch`).
+//! letters the verifier can establish on its own, so no one can write other text there and the
+//! verifier rejects a stamp that differs (`stamp_mismatch`).
 //!
 //! ## The rules
 //!
-//! * **`name-v1`** (envelope schema version 9 and later, written in the envelope's
+//! * **`signer-v1`** (envelope schema version 12): the letters **the signer chose**, 1 to 3
+//!   letters the stamp font draws ([`check_signer_initials`]), kept in their own signature record
+//!   (`initials`), which their signature covers. A host offers [`signer_v1_default`] (the
+//!   `name-v1` letters) as the starting value. Only the signer's own revision writes them, so
+//!   neither the preparer nor another signer chooses what stands in someone's initials boxes.
+//! * **`name-v1`** (envelope schema versions 9 to 11, written in the envelope's
 //!   `initials_rule`): the initials of the signer's **name as the preparer gave it** (the slot's
 //!   `name`, part of the prepared terms the preparer signs), else of the verified email address
 //!   ([`name_v1`]).
@@ -45,6 +50,18 @@
 //!
 //! The shared test vectors are in `spec/vectors/initials-name-v1.json`; a host that shows the
 //! letters before signing (a signing page) must give the same letters for each of them.
+//!
+//! ## `signer-v1` in detail
+//!
+//! The signer's letters are 1 to 3 characters (Unicode scalar values), each an *initials letter*
+//! ([`is_initials_letter`]): `A` to `Z`, `a` to `z`, the letters of Latin-1 (U+00C0 to U+00FF
+//! except `×` U+00D7 and `÷` U+00F7) and `Š` `š` `Œ` `œ` `Ž` `ž` `Ÿ`: exactly the letters
+//! WinAnsiEncoding draws, without the ordinal indicators `ª` `º`, the micro sign `µ`, the
+//! florin `ƒ` and the modifier circumflex `ˆ`. No space, digit, punctuation, combining mark or control character, and no
+//! normalization: a host composes what the signer typed (NFC) before it sends it, and the engine
+//! refuses anything else rather than change it. Capitals and small letters are kept as the
+//! signer wrote them (`JvB`). The shared test vectors are in
+//! `spec/vectors/initials-signer-v1.json`.
 
 use serde::{Deserialize, Serialize};
 
@@ -52,9 +69,12 @@ use serde::{Deserialize, Serialize};
 /// version 9). Versions 3 to 8 name none and use [`email_rule`].
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum InitialsRule {
-    /// [`name_v1`]: the slot's name, else the verified email address.
+    /// [`name_v1`]: the slot's name, else the verified email address (versions 9 to 11).
     #[serde(rename = "name-v1")]
     NameV1,
+    /// The letters the signer chose, kept in their signature record (version 12).
+    #[serde(rename = "signer-v1")]
+    SignerV1,
 }
 
 impl InitialsRule {
@@ -62,18 +82,71 @@ impl InitialsRule {
     pub fn as_str(self) -> &'static str {
         match self {
             InitialsRule::NameV1 => "name-v1",
+            InitialsRule::SignerV1 => "signer-v1",
         }
     }
 }
 
 /// The initials stamped for a signer under `rule` (`None`: an envelope of version 3 to 8):
 /// `slot_name` is the name the preparer gave the signer's slot, `verified_email` the email address
-/// the signer's identity provider verified.
-pub fn stamp_initials(rule: Option<InitialsRule>, slot_name: &str, verified_email: &str) -> String {
+/// the signer's identity provider verified, `chosen` the letters the signer's record keeps
+/// (`signer-v1`; `None` when it keeps none, which gives no letters).
+pub fn stamp_initials(
+    rule: Option<InitialsRule>,
+    slot_name: &str,
+    verified_email: &str,
+    chosen: Option<&str>,
+) -> Option<String> {
     match rule {
-        Some(InitialsRule::NameV1) => name_v1(slot_name, verified_email),
-        None => email_rule(verified_email),
+        Some(InitialsRule::SignerV1) => chosen.map(str::to_string),
+        Some(InitialsRule::NameV1) => Some(name_v1(slot_name, verified_email)),
+        None => Some(email_rule(verified_email)),
     }
+}
+
+/// The most letters a signer's chosen initials may have (`signer-v1`).
+pub const MAX_SIGNER_INITIALS: usize = 3;
+
+/// Whether `c` may stand in a signer's chosen initials (`signer-v1`): a letter WinAnsiEncoding
+/// draws, other than `ª`, `º`, `µ`, `ƒ` and `ˆ`. See the module documentation.
+pub fn is_initials_letter(c: char) -> bool {
+    c.is_ascii_alphabetic()
+        || (('\u{C0}'..='\u{FF}').contains(&c) && c != '\u{D7}' && c != '\u{F7}')
+        || matches!(c, 'Š' | 'š' | 'Œ' | 'œ' | 'Ž' | 'ž' | 'Ÿ')
+}
+
+/// Check the initials a signer chose (`signer-v1`): 1 to [`MAX_SIGNER_INITIALS`] initials
+/// letters ([`is_initials_letter`]) and nothing else. The error says what is wrong.
+pub fn check_signer_initials(letters: &str) -> Result<(), String> {
+    let n = letters.chars().count();
+    if n == 0 {
+        return Err("initials need at least one letter".into());
+    }
+    if n > MAX_SIGNER_INITIALS {
+        return Err(format!(
+            "initials are at most {MAX_SIGNER_INITIALS} letters, and these have {n}"
+        ));
+    }
+    if let Some(c) = letters.chars().find(|c| !is_initials_letter(*c)) {
+        return Err(format!(
+            "initials are letters the stamp can draw, and U+{:04X} is not one",
+            c as u32
+        ));
+    }
+    Ok(())
+}
+
+/// The letters a host offers a signer to start from under `signer-v1`: the `name-v1` letters of
+/// the slot's name (else of the verified email address), keeping only initials letters, at most
+/// [`MAX_SIGNER_INITIALS`]. `None` when nothing is left (a name of another script and an address
+/// of digits): the signer types their own.
+pub fn signer_v1_default(slot_name: &str, verified_email: &str) -> Option<String> {
+    let letters: String = name_v1(slot_name, verified_email)
+        .chars()
+        .filter(|c| is_initials_letter(*c))
+        .take(MAX_SIGNER_INITIALS)
+        .collect();
+    (!letters.is_empty()).then_some(letters)
 }
 
 /// Titles left out before a name (rule `name-v1`, step 2), compared without `.` and `,`.
@@ -262,8 +335,8 @@ mod tests {
         assert!(v.vectors.len() >= 40);
         for t in &v.vectors {
             assert_eq!(
-                stamp_initials(Some(InitialsRule::NameV1), &t.name, &t.email),
-                t.initials,
+                stamp_initials(Some(InitialsRule::NameV1), &t.name, &t.email, Some("XYZ")),
+                Some(t.initials.clone()),
                 "name {:?}, email {:?}",
                 t.name,
                 t.email
@@ -281,8 +354,8 @@ mod tests {
         assert_eq!(email_rule("élodie durand"), "ÉD");
         assert_eq!(email_rule("   "), "?");
         assert_eq!(
-            stamp_initials(None, "Felix Fairfax", "ffairfax@example.com"),
-            "F"
+            stamp_initials(None, "Felix Fairfax", "ffairfax@example.com", Some("XYZ")),
+            Some("F".into())
         );
     }
 
@@ -337,6 +410,104 @@ mod tests {
             serde_json::to_string(&InitialsRule::NameV1).unwrap(),
             r#""name-v1""#
         );
+        assert_eq!(
+            serde_json::to_string(&InitialsRule::SignerV1).unwrap(),
+            r#""signer-v1""#
+        );
         assert!(serde_json::from_str::<InitialsRule>(r#""name-v2""#).is_err());
+        assert!(serde_json::from_str::<InitialsRule>(r#""signer-v2""#).is_err());
+    }
+
+    #[derive(Deserialize)]
+    struct SignerVectors {
+        rule: String,
+        max_letters: usize,
+        valid: Vec<Case>,
+        invalid: Vec<Case>,
+        prefill: Vec<Prefill>,
+    }
+
+    #[derive(Deserialize)]
+    struct Case {
+        initials: String,
+    }
+
+    #[derive(Deserialize)]
+    struct Prefill {
+        name: String,
+        email: String,
+        prefill: Option<String>,
+    }
+
+    #[test]
+    fn the_signer_rule_s_shared_vectors_hold() {
+        let v: SignerVectors = serde_json::from_str(include_str!(
+            "../../../spec/vectors/initials-signer-v1.json"
+        ))
+        .unwrap();
+        assert_eq!(v.rule, InitialsRule::SignerV1.as_str());
+        assert_eq!(v.max_letters, MAX_SIGNER_INITIALS);
+        assert!(v.valid.len() >= 10 && v.invalid.len() >= 15 && v.prefill.len() >= 8);
+        for c in &v.valid {
+            assert_eq!(
+                check_signer_initials(&c.initials),
+                Ok(()),
+                "{:?}",
+                c.initials
+            );
+            // The stamp is exactly the chosen letters, whatever the slot's name.
+            assert_eq!(
+                stamp_initials(
+                    Some(InitialsRule::SignerV1),
+                    "Felix Fairfax",
+                    "f@example.com",
+                    Some(&c.initials)
+                ),
+                Some(c.initials.clone())
+            );
+        }
+        for c in &v.invalid {
+            assert!(
+                check_signer_initials(&c.initials).is_err(),
+                "{:?}",
+                c.initials
+            );
+        }
+        for p in &v.prefill {
+            assert_eq!(
+                signer_v1_default(&p.name, &p.email),
+                p.prefill,
+                "{:?}",
+                p.name
+            );
+            if let Some(letters) = &p.prefill {
+                assert_eq!(check_signer_initials(letters), Ok(()), "{letters:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn initials_letters_are_the_letters_winansi_draws() {
+        // Every initials letter is one the stamp font draws, and every alphabetic character it
+        // draws is one, except the five symbols left out on purpose.
+        for n in 0..0x3000u32 {
+            let Some(c) = char::from_u32(n) else { continue };
+            let drawn = crate::pades::winansi_code(c).is_some();
+            if is_initials_letter(c) {
+                assert!(drawn && c.is_alphabetic(), "{c:?}");
+            } else if drawn && c.is_alphabetic() {
+                assert!(matches!(c, 'ª' | 'º' | 'µ' | 'ƒ' | 'ˆ'), "{c:?}");
+            }
+        }
+        // Under signer-v1, a record without letters gives none.
+        assert_eq!(
+            stamp_initials(
+                Some(InitialsRule::SignerV1),
+                "Felix Fairfax",
+                "f@example.com",
+                None
+            ),
+            None
+        );
     }
 }
